@@ -1,6 +1,6 @@
 ---
 name: arbe-improve-codebase
-description: Find places where a shallow module should be turned into a deep one — applies the deletion test, knob test, layer check, and a paste-ready Explore subagent prompt. Use to improve testability and AI-navigability, consolidate tightly-coupled modules, or find refactoring targets that compound. Whole-repo scope, not single diffs.
+description: Find shallow modules that should become deep modules using the deletion test and depth/leverage/locality lens. Use for repo-wide refactoring that improves testability, AI-navigability, or tightly-coupled areas. Not for single diffs.
 ---
 
 # Architecture deepening

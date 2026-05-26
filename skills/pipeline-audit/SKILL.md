@@ -1,6 +1,6 @@
 ---
 name: arbe-pipeline-audit
-description: 'Interactive guard — walk a README pipeline diagram against the real code and flag every function in the path that the diagram does not justify. Catches shims, single-caller helpers, and same-args wrappers before they accumulate. Use when the codebase feels overgrown, before a refactor sweep, or as a pre-merge check on a path that touched many files. Anchored on README diagrams as the budget.'
+description: Walk README pipeline diagrams against real code and flag functions the diagram does not justify, including shims, single-caller helpers, and same-args wrappers. Use when a path feels overgrown, before a refactor sweep, or after a large diff.
 ---
 
 # Pipeline audit
