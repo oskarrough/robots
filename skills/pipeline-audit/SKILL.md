@@ -28,9 +28,9 @@ If the user wants to audit a path they just worked on, hand off via the `arbe-ha
 
 Three tests, applied to every function in the path:
 
-1. **Not in the diagram** — function isn't a stage the README diagram names. Maybe the diagram is incomplete (promote it to a stage) or maybe the function is dead weight (inline it).
-2. **Single caller** — function has one non-test caller. Either inlinable or a stage the diagram forgot.
-3. **Same-args shim** — function's args match its only callee's args, and the body is a thin transform (null → failure, error → typed error, etc). Always inlinable; the wrappee is the real function and the wrapper is in disguise.
+1. Not in the diagram — function isn't a stage the README diagram names. Maybe the diagram is incomplete (promote it to a stage) or maybe the function is dead weight (inline it).
+2. Single caller — function has one non-test caller. Either inlinable or a stage the diagram forgot.
+3. Same-args shim — function's args match its only callee's args, and the body is a thin transform (null → failure, error → typed error, etc). Always inlinable; the wrappee is the real function and the wrapper is in disguise.
 
 A function failing one test is a candidate. A function failing two is almost certainly disguise.
 
@@ -67,20 +67,20 @@ The "(none)" rows are the candidates. Don't decide yet — list and stop.
 This is the interactive part. **Do not dump the whole list and ask for a verdict.** Two reasons, and the second matters more than the first:
 
 - Humans glaze over lists. A 12-item verdict screen gets a tired "yeah looks fine" instead of real judgment.
-- **The LLM doesn't know which candidates are load-bearing.** A "keep" usually has an invisible reason (a future caller, a contract with an external surface, a historical bug). A "promote" is a README change worth its weight only if the stage is actually conceptually distinct. Without per-candidate questioning, the LLM bulldozes through with confidently wrong batch verdicts. One at a time forces the LLM to surface its uncertainty.
+- The LLM doesn't know which candidates are load-bearing. A "keep" usually has an invisible reason (a future caller, a contract with an external surface, a historical bug). A "promote" is a README change worth its weight only if the stage is actually conceptually distinct. Without per-candidate questioning, the LLM bulldozes through with confidently wrong batch verdicts. One at a time forces the LLM to surface its uncertainty.
 
 Take one candidate, ask one question, get one answer, move to the next.
 
 For each candidate, surface in this order:
 
-1. **Candidate line** — `<name> (<file:line>) — <smell, one phrase>`
-2. **Lean** — the literal first line under the candidate, formatted as `lean: <verdict> — <one sentence why>`. Not in prose, not hedged, not buried after a "design context" paragraph. This is the LLM's read. The user confirms or overrides. If genuinely torn, still pick the one you'd ship.
-3. **Verdicts** — four options, numbered:
-    - **remove** — inline at the (one) callsite; the function isn't earning its name
-    - **keep** — there's a reason; capture the reason in a one-line comment above the function
-    - **promote** — the diagram forgot a stage; update the README to name it
-    - **reshape** — the function is a symptom of a wrongly-shaped data flow. Propose the smaller path edit (move the read into the consumer, drop a courier arg, fold two stages) that makes the candidate disappear because the chain it served stopped existing. Different from `promote` (which extends the diagram to legitimise the function) and from `remove` (which assumes the work stays, just moves).
-4. **Type something…** — user override slot
+1. Candidate line — `<name> (<file:line>) — <smell, one phrase>`
+2. Lean — the literal first line under the candidate, formatted as `lean: <verdict> — <one sentence why>`. Not in prose, not hedged, not buried after a "design context" paragraph. This is the LLM's read. The user confirms or overrides. If genuinely torn, still pick the one you'd ship.
+3. Verdicts — four options, numbered:
+    - remove — inline at the (one) callsite; the function isn't earning its name
+    - keep — there's a reason; capture the reason in a one-line comment above the function
+    - promote — the diagram forgot a stage; update the README to name it
+    - reshape — the function is a symptom of a wrongly-shaped data flow. Propose the smaller path edit (move the read into the consumer, drop a courier arg, fold two stages) that makes the candidate disappear because the chain it served stopped existing. Different from `promote` (which extends the diagram to legitimise the function) and from `remove` (which assumes the work stays, just moves).
+4. Type something… — user override slot
 
 **Bias warning.** When in doubt, the LLM defends the status quo and labels alternatives as "larger changes" or "follow-ups." That's not a real signal — size of change is not the axis. The axis is **cleaner / less code / matches the rest of the codebase**. If one verb of the pipeline (e.g. `reindex`) already does it the cleaner way and another (e.g. `createFile`) is the outlier, the outlier is the one paying for the inconsistency. Lean toward the alignment, not the defence.
 
@@ -94,11 +94,11 @@ If applying now: do the removes in one diff, the reshapes in a second, the READM
 
 ## Glossary
 
-- **Pipeline** — a user-verb diagram in the README. One verb, ~5–10 stages, tree shape.
-- **Stage** — a named node in the diagram. The unit of "did this function earn its place."
-- **Path** — the ordered sequence of functions the code actually traverses for one pipeline.
-- **Candidate** — a function in the path that fails at least one smell test.
-- **Disguise** — a wrapper that looks like a helper but is the real function under a different name (single-caller + same-args).
+- Pipeline — a user-verb diagram in the README. One verb, ~5–10 stages, tree shape.
+- Stage — a named node in the diagram. The unit of "did this function earn its place."
+- Path — the ordered sequence of functions the code actually traverses for one pipeline.
+- Candidate — a function in the path that fails at least one smell test.
+- Disguise — a wrapper that looks like a helper but is the real function under a different name (single-caller + same-args).
 
 ## Examples
 
@@ -137,6 +137,6 @@ The chunker's `mediaPageToChunks` is called from `chunk()` and does real work, b
 
 ## Pairs with
 
-- **arbe-diagram-first** — draws the budget this skill audits against
-- **arbe-review** — diff-time check; this skill is path-time
-- **arbe-improve-codebase** — shallow-vs-deep at the module scale; this is the function scale
+- arbe-diagram-first — draws the budget this skill audits against
+- arbe-review — diff-time check; this skill is path-time
+- arbe-improve-codebase — shallow-vs-deep at the module scale; this is the function scale

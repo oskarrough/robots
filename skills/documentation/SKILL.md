@@ -7,10 +7,10 @@ description: Diátaxis-style four-mode docs (tutorial, how-to, reference, explan
 
 Documentation has four modes. Keep them separate. A tutorial that explains too much drags. A reference that argues becomes useless.
 
-- **tutorial** — learning by doing. Show the destination first. One path. Visible progress. Minimal explanation. It must work every time.
-- **how-to** — solve a problem. Title it from the reader's point of view. Assume competence. Link to explanation for theory.
-- **reference** — describe what exists. Mirror the thing it describes. No rationale unless accuracy needs it.
-- **explanation** — build understanding. Connect concepts, history, and tradeoffs. Opinion is fine.
+- tutorial — learning by doing. Show the destination first. One path. Visible progress. Minimal explanation. It must work every time.
+- how-to — solve a problem. Title it from the reader's point of view. Assume competence. Link to explanation for theory.
+- reference — describe what exists. Mirror the thing it describes. No rationale unless accuracy needs it.
+- explanation — build understanding. Connect concepts, history, and tradeoffs. Opinion is fine.
 
 Before writing, ask what the reader needs right now. Write only that. Link to the other modes.
 

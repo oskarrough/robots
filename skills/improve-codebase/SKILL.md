@@ -13,24 +13,24 @@ Use when test wiring feels disproportionate to what's being tested, or when per-
 
 Use these exactly. Do not drift to "component / service / API / boundary."
 
-- **Module** — anything with an interface and an implementation. Function, class, package, slice. Scale-agnostic.
-- **Interface** — everything a caller must know: types, invariants, ordering, error modes, required config, performance characteristics. Not just the type signature.
-- **Implementation** — what's inside.
-- **Depth** — leverage at the interface. **Deep** = lots of behaviour behind a small interface. **Shallow** = interface nearly as complex as implementation.
-- **Seam** _(Feathers)_ — where an interface lives. The location at which behaviour can be altered without editing in place.
-- **Adapter** — a concrete thing satisfying an interface at a seam.
-- **Leverage** — what callers gain from depth.
-- **Locality** — what maintainers gain: change, bugs, knowledge concentrate in one place.
-- **Layer** — surface (CLI, HTTP routes, UI), core (domain logic), or infra (DB, transport, FS). The layer a scatter lives in is the layer its seam belongs in.
+- Module — anything with an interface and an implementation. Function, class, package, slice. Scale-agnostic.
+- Interface — everything a caller must know: types, invariants, ordering, error modes, required config, performance characteristics. Not just the type signature.
+- Implementation — what's inside.
+- Depth — leverage at the interface. Deep = lots of behaviour behind a small interface. Shallow = interface nearly as complex as implementation.
+- Seam _(Feathers)_ — where an interface lives. The location at which behaviour can be altered without editing in place.
+- Adapter — a concrete thing satisfying an interface at a seam.
+- Leverage — what callers gain from depth.
+- Locality — what maintainers gain: change, bugs, knowledge concentrate in one place.
+- Layer — surface (CLI, HTTP routes, UI), core (domain logic), or infra (DB, transport, FS). The layer a scatter lives in is the layer its seam belongs in.
 
 ### Principles
 
-- **Deletion test.** Imagine deleting the module. If complexity vanishes, it was a pass-through. If complexity reappears across N callers, it earned its keep.
-- **Knob test.** Before recommending consolidation, write out the would-be call signature against every caller. If knobs (nullable params, pluggable hooks, mode flags) grow faster than boilerplate shrinks, the consolidation is a shallow module wearing a deep module's coat. Unification that works for 3 of 5 callers and forces optional knobs for the 4th and 5th is a failed candidate.
-- **Layer check.** Name the layer the scatter lives in. The seam belongs at that layer. A surface-layer scatter ("25 CLI commands repeat invoke-and-format") doesn't become a core-layer module — the duplication is at the surface, fix it at the surface.
-- **The interface is the test surface.** If you want to test past the interface, the module is the wrong shape.
-- **One adapter = hypothetical seam. Two adapters = real seam.** Don't introduce a port unless something actually varies across it.
-- **Depth is a property of the interface, not the implementation.** A deep module can be internally composed of small mockable parts — they just aren't part of the interface.
+- Deletion test. Imagine deleting the module. If complexity vanishes, it was a pass-through. If complexity reappears across N callers, it earned its keep.
+- Knob test. Before recommending consolidation, write out the would-be call signature against every caller. If knobs (nullable params, pluggable hooks, mode flags) grow faster than boilerplate shrinks, the consolidation is a shallow module wearing a deep module's coat. Unification that works for 3 of 5 callers and forces optional knobs for the 4th and 5th is a failed candidate.
+- Layer check. Name the layer the scatter lives in. The seam belongs at that layer. A surface-layer scatter ("25 CLI commands repeat invoke-and-format") doesn't become a core-layer module — the duplication is at the surface, fix it at the surface.
+- The interface is the test surface. If you want to test past the interface, the module is the wrong shape.
+- One adapter = hypothetical seam. Two adapters = real seam. Don't introduce a port unless something actually varies across it.
+- Depth is a property of the interface, not the implementation. A deep module can be internally composed of small mockable parts — they just aren't part of the interface.
 
 ## Process
 
@@ -55,14 +55,14 @@ See `## Subagent prompt template` below.
 
 Distill the subagent's report into a numbered list. Per candidate:
 
-- **Files** — exact paths with **per-file line counts**. No averages. Call out outliers explicitly (e.g. "threads.ts is 408 lines; the other 4 average ~95 — threads is the outlier carrying real logic, not a peer").
-- **Layer** — surface / core / infra. The proposed seam must sit at this layer.
-- **Problem** — the shallow interface or scattered logic
-- **Deletion test** — concentrates complexity (keep) or disperses it (pass-through)?
-- **Knob test** — write the would-be unified signature. List the knobs each caller would force in. Pass only if knobs stay flat as callers grow.
-- **Preserve cross-check** — scan the "already deep — preserve" list for a module that already owns this verb. **If found, reframe as migration into that module, not invention of a new one.** This rule alone kills most false-positive candidates.
-- **Sketch** — what the deepened module would own, in domain vocab. **Do not propose interfaces yet.**
-- **Leverage / Locality / Test surface change**
+- Files — exact paths with per-file line counts. No averages. Call out outliers explicitly (e.g. "threads.ts is 408 lines; the other 4 average ~95 — threads is the outlier carrying real logic, not a peer").
+- Layer — surface / core / infra. The proposed seam must sit at this layer.
+- Problem — the shallow interface or scattered logic
+- Deletion test — concentrates complexity (keep) or disperses it (pass-through)?
+- Knob test — write the would-be unified signature. List the knobs each caller would force in. Pass only if knobs stay flat as callers grow.
+- Preserve cross-check — scan the "already deep — preserve" list for a module that already owns this verb. If found, reframe as migration into that module, not invention of a new one. This rule alone kills most false-positive candidates.
+- Sketch — what the deepened module would own, in domain vocab. Do not propose interfaces yet.
+- Leverage / Locality / Test surface change
 
 Add the "already deep — preserve" section first, so cross-checks have something to reference. End with _"Which of these do you want to explore?"_ — do not start designing.
 
@@ -72,9 +72,9 @@ Walk the design tree with the user — constraints, dependencies, shape of the d
 
 Side effects inline as decisions crystallize:
 
-- **Naming a module after a concept not in the glossary?** Add the term.
-- **Sharpening a fuzzy term mid-conversation?** Update the glossary then.
-- **User rejects with a load-bearing reason future explorers would need?** Offer to record an ADR under `docs/adr/`. Skip ephemeral or self-evident rejections.
+- Naming a module after a concept not in the glossary? Add the term.
+- Sharpening a fuzzy term mid-conversation? Update the glossary then.
+- User rejects with a load-bearing reason future explorers would need? Offer to record an ADR under `docs/adr/`. Skip ephemeral or self-evident rejections.
 
 ### 5. Optional — parallel interface design
 
@@ -84,10 +84,10 @@ Present sequentially, compare by **depth / locality / seam placement**, recommen
 
 Dependency categories for picking the seam:
 
-- **In-process** — pure / in-memory. No adapter. Test directly.
-- **Local-substitutable** — local stand-in exists (PGLite for Postgres). Internal seam, no port at the external interface.
-- **Remote but owned** — your own services across a network. Port + production adapter + in-memory test adapter.
-- **True external** — Stripe, Twilio, etc. Inject a port; tests use mock adapter.
+- In-process — pure / in-memory. No adapter. Test directly.
+- Local-substitutable — local stand-in exists (PGLite for Postgres). Internal seam, no port at the external interface.
+- Remote but owned — your own services across a network. Port + production adapter + in-memory test adapter.
+- True external — Stripe, Twilio, etc. Inject a port; tests use mock adapter.
 
 ### Testing strategy: replace, don't layer
 

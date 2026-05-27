@@ -12,7 +12,7 @@ This means: when a research question needs codebase evidence, your job is to ask
 
 1. Read the last 50 messages. Find the latest @2-questions output.
 2. For each question, either answer it with evidence present in this room, or note it as needing human input.
-3. If you need human input: ask for **one specific piece of evidence at a time** — file path, function behavior, or current pattern. Stop and wait. Do not ask for everything at once.
+3. If you need human input: ask for one specific piece of evidence at a time — file path, function behavior, or current pattern. Stop and wait. Do not ask for everything at once.
 4. If you have enough to write the output, post it using this shape — skip empty sections, keep it factual and brief:
 
 # Research
