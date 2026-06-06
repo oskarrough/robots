@@ -18,6 +18,23 @@ Each doc serves one reader — someone developing on arbe, someone building on i
 
 Docs describe what the system is and why; tasks carry what we're about to do. When code and doc disagree, fix the code or update the doc — don't silently drift the doc to match reality.
 
+## Altitude
+
+A doc is a map to the code, not a transcript of it. Lead with how the pieces wire together and why; let the agent open the file for the rest. The test for any line: would you have to edit it in lockstep with a code change? If yes, the code already owns it — name the code path and link, don't copy. Copies drift; the original never lies.
+
+Include:
+- the wiring — what the pieces are and how they connect
+- the why — design contracts, boundaries, the reason a seam exists
+- the names of the code paths that own the detail
+
+Leave to the code:
+- function and type signatures, `interface` blocks, column and field lists
+- CLI flags, alias lists, `--help` output
+- per-file or per-function maps, and flowcharts that mirror one function's control flow
+- constants and thresholds that live in the source
+
+A reference doc legitimately mirrors a stable contract, such as an HTTP API or wire format. Everything else is a map.
+
 ## Design docs
 
 When a concept needs shared reference across multiple tasks, write a design doc instead of duplicating context. One concept per doc. Start with what it is, then how it behaves, then scope. Include concrete examples and error cases. Implementable without clarification.
@@ -52,15 +69,17 @@ what breaks or is missing, and why it matters (2-3 sentences)
 4. Remove stale claims.
 5. Keep the structure unless it misleads.
 6. If a section is already clear and correct, leave it alone.
-7. When adding, renaming, or removing a file under `docs/`, update any hand-maintained sidebar/index so it stays in sync.
+7. When adding, renaming, or removing a file under `docs/`, update any hand-maintained sidebar or index so it stays in sync.
 
 ## Style
 
 Front-load the point. Assume the reader may leave after the first paragraph.
 
-Be terse. Cut repetition. Link instead of restating. Docs should point at code, not paraphrase it.
+Be terse. Cut repetition. Link instead of restating.
 
 No marketing headings. No padding. Use bullets only when they clarify.
+
+No `**bold**` ornament — no `**term**: gloss` lists, no bold mini-titles. Write prose, or lead with a plain label.
 
 ASCII diagrams are good.
 
@@ -68,20 +87,20 @@ ASCII diagrams are good.
 
 Spot the trigger, apply the fix. Examples are real shapes, not parody.
 
-**Migration narration.** Triggers: "retired with…", "the previous X was…", "we used to have…", "X is gone (task-1234)". Fix: delete. Describe the current shape only. History lives in commits.
+Migration narration. Triggers: "retired with…", "the previous X was…", "we used to have…", "X is gone". Fix: delete. Describe the current shape only. History lives in commits.
 
-**Task IDs in prose.** Trigger: any task ID outside a task file. Fix: delete the parenthetical, or replace with a concept link. IDs belong in tasks.
+Task IDs in prose. Trigger: any task ID outside a task file. Fix: delete the parenthetical, or replace with a concept link. IDs belong in tasks.
 
-**Self-defending paragraph.** Trigger: a noun's definition followed by why-it's-good. Fix: keep the definition, drop the defence. If you can't drop it without losing meaning, the design isn't settled — say "open" instead.
+Self-defending paragraph. Trigger: a noun's definition followed by why-it's-good. Fix: keep the definition, drop the defence. If you can't drop it without losing meaning, the design isn't settled — say "open" instead.
 
-**Same claim, three sentences.** Trigger: a paragraph where each sentence introduces a fresh metaphor for one fact. Fix: keep the strongest sentence, delete the others.
+Same claim, three sentences. Trigger: a paragraph where each sentence introduces a fresh metaphor for one fact. Fix: keep the strongest sentence, delete the others.
 
-**Wrong-page duplication.** Trigger: a section re-explains a concept another doc owns (storage, permissions, secrets). Fix: cut to a one-line pointer and link the owner — don't re-explain. Two docs explaining one mechanism drift apart.
+Wrong-page duplication. Trigger: a section re-explains a concept another doc owns (storage, permissions, secrets). Fix: cut to a one-line pointer and link the owner — don't re-explain. Two docs explaining one mechanism drift apart.
 
-**Justifying subordinate clause.** Trigger: "To keep X on the fast path, we…", "So that Y stays Z, …". Fix: drop the clause. State the rule.
+Justifying subordinate clause. Trigger: "To keep X on the fast path, we…", "So that Y stays Z, …". Fix: drop the clause. State the rule.
 
-**Aphorism without contrast.** Trigger: "X is A, not B" where B no longer exists in the codebase. Fix: delete. It only worked while B was live.
+Aphorism without contrast. Trigger: "X is A, not B" where B no longer exists in the codebase. Fix: delete. It only worked while B was live.
 
-**Status preamble that's now stale.** Trigger: "> **Status.** … is in progress / landing soon / task-1234 closes when …". Fix: delete if landed; otherwise rewrite as one line of present-tense scope.
+Status preamble that's now stale. Trigger: "> Status. … is in progress / landing soon / task closes when …". Fix: delete if landed; otherwise rewrite as one line of present-tense scope.
 
-**Compressed sentence.** Trigger: one sentence introduces and defines three or more unfamiliar nouns at once, usually via apposition or stacked clauses. Reader has to hold every term simultaneously to parse the verb. Fix: one new term per sentence. Name it, then say what it does. Whitespace between concepts.
+Compressed sentence. Trigger: one sentence introduces and defines three or more unfamiliar nouns at once, usually via apposition or stacked clauses. Reader has to hold every term simultaneously to parse the verb. Fix: one new term per sentence. Name it, then say what it does. Whitespace between concepts.
