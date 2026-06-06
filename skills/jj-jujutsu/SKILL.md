@@ -83,6 +83,9 @@ gh pr create                             # gh picks up the pushed bookmark
 
 Lead with motivation. Write for a stranger reading the log, not the author who just lived it. Plain words.
 
+Good: `Throw ArbeError from core/threads.`
+Good: `Stop logging 'undefined' in mutation logs. Closes arbe-e9d8.`
+
 No AI/Claude/Anthropic/`Co-Authored-By` attribution in commits, PRs, or files.
 
 </important>

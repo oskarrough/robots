@@ -26,6 +26,7 @@ Focus on:
 - transport boundaries
 - auth/session boundaries
 - dispatch/parsing boundaries
+- capability boundaries
 - what higher-level features are composed from
 
 Ignore:
@@ -39,8 +40,9 @@ Process:
 2. Identify the smallest meaningful operations those modules expose.
 3. Group them into capability areas.
 4. Note the shared types/schemas those primitives rely on.
-5. Separate shared primitives from app/server/UI orchestration.
-6. Call out what is not exposed.
+5. Identify storage and transport boundaries.
+6. Separate shared primitives from app/server/UI orchestration.
+7. Call out what is not exposed.
 
 A primitive is one of:
 - a reusable contract or type
@@ -88,6 +90,7 @@ I am not interested in the app itself. I only want the primitives this repo cont
 
 - Spiking on a legacy or unfamiliar codebase you might embed, fork, wrap, or expose
 - Deciding whether a repo can become an MCP server or a library
+- Answering what the core building blocks are if the product shell were stripped away
 - Briefing someone else on what's actually reusable, in a form that fits on one screen
 
 ## Optional loosening
