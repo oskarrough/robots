@@ -14,6 +14,8 @@ Documentation has four modes. Keep them separate. A tutorial that explains too m
 
 Before writing, ask what the reader needs right now. Write only that. Link to the other modes.
 
+Each doc serves one reader — someone developing on arbe, someone building on its APIs, or someone using the web app. Infer which from the doc's content and place; don't write a banner saying so. Write only what that reader needs and cut what they don't. If you're serving two readers in one doc, it's two docs.
+
 Docs describe what the system is and why; tasks carry what we're about to do. When code and doc disagree, fix the code or update the doc — don't silently drift the doc to match reality.
 
 ## Design docs
@@ -73,6 +75,8 @@ Spot the trigger, apply the fix. Examples are real shapes, not parody.
 **Self-defending paragraph.** Trigger: a noun's definition followed by why-it's-good. Fix: keep the definition, drop the defence. If you can't drop it without losing meaning, the design isn't settled — say "open" instead.
 
 **Same claim, three sentences.** Trigger: a paragraph where each sentence introduces a fresh metaphor for one fact. Fix: keep the strongest sentence, delete the others.
+
+**Wrong-page duplication.** Trigger: a section re-explains a concept another doc owns (storage, permissions, secrets). Fix: cut to a one-line pointer and link the owner — don't re-explain. Two docs explaining one mechanism drift apart.
 
 **Justifying subordinate clause.** Trigger: "To keep X on the fast path, we…", "So that Y stays Z, …". Fix: drop the clause. State the rule.
 
