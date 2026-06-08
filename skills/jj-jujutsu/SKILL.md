@@ -28,7 +28,7 @@ jj log -r @ --no-graph -T change_id      # capture current change ID
 jj diff --stat                           # what changed (never bare jj diff — burns context)
 jj diff <path>                           # inspect specific files
 jj new                                   # fresh change on top of @
-jj commit -m "msg" -- <files>            # close @ keeping <files> (escape [id] as [[]id[]])
+jj commit -m "msg" -- <files>            # close @ keeping <files> (wrap [id] paths: cwd:"...")
 jj edit <id>                             # move @ to an existing revision
 jj abandon -r <id>                       # discard empty revision
 jj restore --from main <file>            # restore a file from another revision
@@ -36,7 +36,14 @@ jj restore --from main <file>            # restore a file from another revision
 
 ## Selective changes
 
-**Fileset paths use glob syntax.** Literal `[` and `]` match character classes, so SvelteKit routes like `[id]` or `[...path]` silently match nothing. Escape them: `[[]id[]]`, `[[]...path[]]`. Unmatched paths are dropped without error — `squash`/`split`/`restore` report success and move only files that matched. After any fileset-based rewrite, verify with `jj show <id>` or `jj diff -r <id>`.
+**Bare fileset paths are `prefix-glob:` — `[` and `]` are glob character classes.** So SvelteKit routes like `[house_id]` or `[...path]` silently match **nothing**: `jj commit -- .../[house_id]/+page.svelte` closes `@` without that file, leaving it stranded in the new `@`. Shell quoting does NOT help — jj parses the glob after the shell. **Fix: wrap any path containing `[`/`]` in `cwd:"..."`** (literal prefix, no glob; matches a file or a whole directory subtree, verbatim):
+
+```sh
+jj commit -m "msg" -- 'cwd:"apps/www/src/routes/houses/[house_id]/+page.svelte"'   # one file
+jj commit -m "msg" -- 'cwd:"apps/www/src/routes/houses/[house_id]"'                 # whole [house_id] subtree
+```
+
+`file:"..."` also works for an exact single file but not a directory; `cwd:"..."` covers both, so prefer it. (Hand-escaping as `[[]id[]]` works too but is easy to botch — don't.) Unmatched paths are dropped **without error** — `commit`/`squash`/`split`/`restore` report success and move only the files that matched. After any fileset op touching a bracket path, verify the file actually moved with `jj show <id>` / `jj diff -r <id>`.
 
 **Committing selected files from a mixed working copy** — `jj commit -m "msg" -- f1 f2` keeps the listed files in `@` (closing it) and moves the rest to a new `@`. Repeat per group; the last commit leaves an empty, undescribed `@` — the clean tip the next session needs.
 
