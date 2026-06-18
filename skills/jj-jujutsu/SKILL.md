@@ -45,6 +45,8 @@ jj commit -m "msg" -- 'cwd:"apps/www/src/routes/houses/[house_id]"'             
 
 `file:"..."` also works for an exact single file but not a directory; `cwd:"..."` covers both, so prefer it. (Hand-escaping as `[[]id[]]` works too but is easy to botch — don't.) Unmatched paths are dropped **without error** — `commit`/`squash`/`split`/`restore` report success and move only the files that matched. After any fileset op touching a bracket path, verify the file actually moved with `jj show <id>` / `jj diff -r <id>`.
 
+**`-m` before `--`, never after.** After `--` = filesets, so a trailing `-m "msg"` becomes a fileset arg → the message parses as fileset syntax → parse error (e.g. pointing at "attachment"). Always `jj commit -m "msg" -- f1 f2`.
+
 **Committing selected files from a mixed working copy** — `jj commit -m "msg" -- f1 f2` keeps the listed files in `@` (closing it) and moves the rest to a new `@`. Repeat per group; the last commit leaves an empty, undescribed `@` — the clean tip the next session needs.
 
 **Never `jj restore` to clean up a mixed working copy.** Parallel agents edit the same working copy, and jj auto-snapshots their in-flight edits into *your* `@` on every command. `jj restore --from @- --to @ <files>` rewrites those files to the committed state of `@-`, silently destroying the other agent's uncommitted work. Use `jj commit -- <your-files>` instead — it preserves everything else on a fresh `@` for the other agent to continue from. `jj restore` is only safe when you know a file is yours alone and you want to throw away *your own* edits on it.
