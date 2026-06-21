@@ -5,14 +5,28 @@ Not so private public robot files.
 AGENTS
 ---------------
 
-Three global Pi subagents, via tintinweb/pi-subagents:
+Three global subagents for Pi, Claude Code, and Codex:
 
-- `librarian` — fast read-only finder. Haiku 4.5, thinking off. Use for where/how questions and path:line evidence.
-- `oracle` — adversarial read-only decider. Opus 4.8, thinking high. Use for architecture calls, risky plans, and stubborn bugs.
-- `arbe` — scoped builder. Sonnet, thinking medium. Use once the direction is clear.
+- `librarian` — fast read-only finder for where/how questions and path:line evidence.
+- `oracle` — adversarial read-only decider for architecture calls, risky plans, and stubborn bugs.
+- `arbe` — scoped builder for implementation once the direction is clear.
 
-Pi tintinweb subagents reads `~/.pi/agent/agents/*.md` and `~/.pi/agent/subagents.json`.
-Those paths are symlinked to `agents/{arbe,librarian,oracle}.md` and `subagents.json` in this repo.
+Install them globally:
+
+    bun run install-agents
+
+Pass one or more targets to limit the install, for example
+`bun run install-agents codex claude`.
+
+The Markdown files in `agents/` are the source of truth. The installer copies
+them into Pi and renders the corresponding Claude Markdown and Codex TOML:
+
+- Pi: `~/.pi/agent/agents/*.md` and `~/.pi/agent/subagents.json`
+- Claude Code: `~/.claude/agents/*.md`
+- Codex: `~/.codex/agents/*.toml`
+
+Re-run the installer after changing an agent. Existing files with the same
+three agent names are replaced; unrelated agents are left alone.
 
 SKILLS
 ---------------

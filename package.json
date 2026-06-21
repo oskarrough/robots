@@ -1,0 +1,7 @@
+{
+  "name": "robots",
+  "private": true,
+  "scripts": {
+    "install-agents": "bun run scripts/install-agents.ts"
+  }
+}
