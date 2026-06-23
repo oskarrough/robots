@@ -13,7 +13,7 @@ We interact with git using `jj` (jujutsu). Use `--help` to learn flags.
 
 No staging area — the working copy IS the current change. `@` = current, `@-` = parent. Every command auto-snapshots. One change per task; `jj commit` to close.
 
-**Prefer explicit change IDs over `@`/`@-`.** Parallel agents move `@` between your commands. Capture the ID up front (`jj log -r @ --no-graph -T change_id`) and pass it: `jj split -r <id>`, `jj describe -r <id>`, `jj squash --from <A> --into <B>`, `jj abandon -r <id>`. `jj commit` has no `-r` and always acts on `@` — `jj edit <id>` first if `@` may have moved. Always pass explicit file paths too — bare `commit`/`split` opens an editor and hangs non-interactive shells. Re-check `jj st` before destructive ops.
+**Prefer explicit change IDs over `@`/`@-`.** Parallel agents move `@` between your commands. Capture the ID up front (`jj log -r @ --no-graph -T change_id`) and pass it: `jj split -r <id>`, `jj describe -r <id>`, `jj squash --from <A> --into <B>`, `jj abandon -r <id>`. `jj commit` has no `-r` and always acts on `@` — `jj edit <id>` first if `@` may have moved. Always pass explicit file paths too, and keep `-m "msg"` **before** `--` — bare `commit`/`split`, or an `-m` placed *after* `--` (jj swallows it as a non-matching fileset and falls back to the editor), opens an editor and hangs non-interactive shells. Re-check `jj st` before destructive ops.
 
 **Leave `@` empty and undescribed when done.** A described `@` is a trap for the next `jj describe`. Non-empty revisions need a description (fix with `jj describe -r <id> -m "..."`). Before finishing, scan `jj log` for non-empty undescribed revisions — usually orphans from a squash or rebase.
 
