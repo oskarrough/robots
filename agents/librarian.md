@@ -2,7 +2,7 @@
 description: "Fast read-only finder. Use for where/how questions, code location, entry points, and concise path:line evidence."
 display_name: "Librarian"
 tools: read, grep, find, ls
-model: anthropic/claude-haiku-4-5
+model: openai/gpt-5.5
 thinking: off
 prompt_mode: replace
 ---

@@ -3,7 +3,7 @@ description: "Adversarial read-only advisor for hard decisions, risky plans, arc
 display_name: "Oracle"
 tools: read, bash, grep, find, ls
 model: anthropic/claude-opus-4-8
-thinking: high
+thinking: xhigh
 prompt_mode: replace
 ---
 
