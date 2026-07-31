@@ -1,13 +1,13 @@
 ---
 name: arbe-diagram-first
-description: When the user explicitly asks for design, structure, or architecture work, draw a 5–10 line ASCII pipeline of the user verb and stop. Use when the user pastes a multi-paragraph spec, asks "one thing or two", or asks how to structure/shape something. Skip for bug reports, UX complaints, feature implementation of an already-pinned verb, and anything where the user hasn't asked for design work.
+description: Draw a 5–10 line ASCII pipeline of the user verb, then stop and wait — no prose or code until the shape is agreed. Use for a single design or structure question - a pasted spec, "one thing or two", "how should this be shaped". For a full design session through to a plan use arbe-mull; to audit a diagram that already exists use arbe-pipeline-audit. Skip for bug reports, UX complaints, and features whose verb is already pinned.
 ---
 
 # Diagram-first
 
 On an explicit design question: draw a 5–10 line ASCII pipeline of the user verb, then stop with a question or claim. No preamble, no architecture essay, no code until the user reacts.
 
-Detailed specs often bake in the wrong shape because the author is too close to today's code. A verb-first tree is the quick check. Use this without being asked when a long prescriptive spec lands — don't wait for the user to reframe it.
+Detailed specs often bake in the wrong shape because the author is too close to today's code. A verb-first tree is the quick check.
 
 ## When to use
 

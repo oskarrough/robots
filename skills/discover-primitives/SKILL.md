@@ -1,6 +1,6 @@
 ---
 name: arbe-discover-primitives
-description: Read a repo as an SDK/MCP surface and distill the reusable primitives into a mental model — not a report. Use when you need to hold the shape of an unfamiliar codebase in your head, or share it with someone who has to make a decision.
+description: Distill an unfamiliar repo into at most 10 reusable primitives, capability groups, and a plain dependency graph — a mental model, not an inventory. Use when deciding whether a codebase can be wrapped, forked, or exposed as a library/MCP server, or when briefing someone on what is reusable with the product shell stripped away. Describes what exists; use arbe-diagram-first to design a new shape and arbe-improve-codebase to change one.
 ---
 
 # Discover primitives
@@ -16,18 +16,12 @@ Read this repo as if the app/UI were stripped away and only a reusable SDK/MCP-l
 
 Goal: a mental model I can hold in my head and share with someone who has to make a decision. Not an inventory.
 
-Focus on:
-- primitive operations
-- exported/shared modules
-- reusable abstractions
-- shared data contracts
-- protocol adapters
-- storage/state mechanisms
-- transport boundaries
-- auth/session boundaries
-- dispatch/parsing boundaries
-- capability boundaries
-- what higher-level features are composed from
+A primitive is one of:
+- a reusable contract or type
+- a state/storage boundary
+- a transport boundary
+- a parser/normalizer/dispatcher boundary
+- an auth/session capability
 
 Ignore:
 - UI flows, screens, pages, components (unless one reveals a primitive)
@@ -43,13 +37,6 @@ Process:
 5. Identify storage and transport boundaries.
 6. Separate shared primitives from app/server/UI orchestration.
 7. Call out what is not exposed.
-
-A primitive is one of:
-- a reusable contract or type
-- a state/storage boundary
-- a transport boundary
-- a parser/normalizer/dispatcher boundary
-- an auth/session capability
 
 Output (strict, in this order):
 1. One sentence — what is the underlying machine this repo is, beneath the product?

@@ -30,6 +30,12 @@ whether this project uses a task system and which one. Trust explicit
 project-local evidence such as `AGENTS.md`, `CONTRIBUTING.md`, repository docs
 or config, and the user's direction.
 
+The evidence must explicitly bind the task system to this repository's
+development work. An instruction that only routes personal context or personal
+tasks elsewhere does not establish a tracker for the current project. Do not
+leave a code repository to inspect personal notes merely to discover a task
+system; feature-area triage normally needs only project context.
+
 The presence of an installed CLI, connector, global skill, personal tracker,
 or tracker used by another project is not evidence. Do not initialize a task
 system or fall back to an unrelated one. A project with no tracker is valid:

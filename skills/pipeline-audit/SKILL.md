@@ -1,6 +1,6 @@
 ---
 name: arbe-pipeline-audit
-description: Walk README pipeline diagrams against real code and flag functions the diagram does not justify, including shims, single-caller helpers, and same-args wrappers. Use when a path feels overgrown, before a refactor sweep, or after a large diff.
+description: Walk an existing README pipeline diagram against the real call path, flag every function that is not a named stage, has a single caller, or wraps its callee's args, then decide each candidate with the user one at a time. Use before a refactor sweep, after a large diff, or when a path feels overgrown. Requires diagrams to already exist — if none do, run arbe-diagram-first first. Function scale: use arbe-review for a single diff, arbe-improve-codebase for module scale.
 ---
 
 # Pipeline audit
@@ -20,9 +20,7 @@ Skip during active feature work — this is for sweeps, not in-flight design.
 
 ## Run in a fresh conversation
 
-**Always invoke this skill in a new session, not one that just refactored the path you're auditing.** The skill earns its keep by reading the code with no priors. An LLM that just deleted `requireFileRow` will "find" the wrappers it remembers, not the wrappers the diagram is actually missing. The result looks like a successful audit but is just recall.
-
-If the user wants to audit a path they just worked on, hand off via the `arbe-handover` skill or open a new conversation with only the skill name + target diagram as context.
+**Always invoke this skill in a new session, not one that just refactored the path you're auditing.** Fresh eyes find the wrappers the diagram is missing. Memory finds the wrappers it already knows about — which reads like a successful audit and isn't. To audit a path you just worked on, start a new conversation with only the skill name and the target diagram as context.
 
 ## Smells
 
@@ -102,7 +100,7 @@ If applying now: do the removes in one diff, the reshapes in a second, the READM
 
 ## Examples
 
-### Same-args shim (real, from this repo)
+### Same-args shim (real, from an Effect/TypeScript codebase)
 
 ```ts
 const requireFileRow = (storeId, fileId) =>

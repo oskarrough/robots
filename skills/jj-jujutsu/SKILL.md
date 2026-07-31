@@ -34,6 +34,8 @@ jj abandon -r <id>                       # discard empty revision
 jj restore --from main <file>            # restore a file from another revision
 ```
 
+**`jj run <shell_command> -r <revset> -j <jobs>`** runs a command across a set of revisions in parallel, each with its own private working copy (e.g. `jj run 'cargo check' -r 'trunk()..@' -j 4`) — still a stub/WIP on our installed jj 0.41 (`jj run --help` says "does not work yet").
+
 ## Selective changes
 
 **Bare fileset paths are `prefix-glob:` — `[` and `]` are glob character classes.** So SvelteKit routes like `[house_id]` or `[...path]` silently match **nothing**: `jj commit -- .../[house_id]/+page.svelte` closes `@` without that file, leaving it stranded in the new `@`. Shell quoting does NOT help — jj parses the glob after the shell. **Fix: wrap any path containing `[`/`]` in `cwd:"..."`** (literal prefix, no glob; matches a file or a whole directory subtree, verbatim):
