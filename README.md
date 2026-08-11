@@ -40,6 +40,7 @@ SKILLS
 - [arbe-pipeline-audit](skills/pipeline-audit/SKILL.md) — walk README pipeline diagrams against code
 - [arbe-documentation](skills/documentation/SKILL.md) — Diátaxis four-mode docs
 - [arbe-orchestrate](skills/orchestrate/SKILL.md) — triage tasks/backlog and prep work for agent dispatch
+- [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
 - [bro](skills/bro/SKILL.md) — restate the last message in plain human language
 
 To create a new skill: 
