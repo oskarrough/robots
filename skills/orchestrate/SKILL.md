@@ -1,6 +1,6 @@
 ---
 name: arbe-orchestrate
-description: Triage a backlog, design doc, or feature area and prepare work so it's ready to hand to builder agents — surface issues one at a time, wire deps, recommend dispatch order. Use when the user says "orchestrate", "orchestrate only", "triage", or points you at an area to prep for dispatch. This is the triage half; live in-session delegation (librarian/oracle/arbe) is governed by the arbe prompt.
+description: Triage a backlog, design doc, or feature area and prepare work so it's ready to hand to builder agents — surface issues one at a time, wire deps, recommend dispatch order. Use when the user says "orchestrate", "orchestrate only", "triage", or points you at an area to prep for dispatch. This decides *what* to hand off and in what order; to actually run the workers, see arbe-delegate.
 ---
 
 # Orchestrate
@@ -12,6 +12,8 @@ Two senses of "dispatch" — keep them straight:
 - **Investigating to triage** (the arbe prompt): delegate freely. Fan out `librarian` to locate scope and `oracle` to weigh a design call rather than reading everything yourself. Triaging well means leaning on subagents to answer the questions for you — that's encouraged here, not forbidden.
 
 So: delegate hard for the *investigation*, but don't silently start *implementing* the tasks you're triaging. Surface the plan first.
+
+Once the plan is approved and it's time to launch builders, `arbe-delegate` covers the mechanics — spawning panes, choosing a worker kind and model, briefing, and reading results back.
 
 ## Process
 
@@ -104,7 +106,7 @@ Once issues are resolved, confirm each task has:
 
 ### 4. Recommend dispatch order
 
-Present the final plan: which tasks to dispatch in parallel, which sequentially, and why. The human makes the call on launching the builders.
+Present the final plan: which tasks to dispatch in parallel, which sequentially, and why. The human makes the call on launching the builders. Note which tasks aren't worth a worker at all — a one-file edit you already understand is faster done than briefed.
 
 ## Rules
 

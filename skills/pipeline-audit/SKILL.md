@@ -1,6 +1,6 @@
 ---
 name: arbe-pipeline-audit
-description: Walk an existing README pipeline diagram against the real call path, flag every function that is not a named stage, has a single caller, or wraps its callee's args, then decide each candidate with the user one at a time. Use before a refactor sweep, after a large diff, or when a path feels overgrown. Requires diagrams to already exist — if none do, run arbe-diagram-first first. Function scale: use arbe-review for a single diff, arbe-improve-codebase for module scale.
+description: "Walk an existing README pipeline diagram against the real call path, flag every function that is not a named stage, has a single caller, or wraps its callee's args, then decide each candidate with the user one at a time. Use before a refactor sweep, after a large diff, or when a path feels overgrown. Requires diagrams to already exist — if none do, run arbe-diagram-first first. Function scale: use arbe-review for a single diff, arbe-improve-codebase for module scale."
 ---
 
 # Pipeline audit
