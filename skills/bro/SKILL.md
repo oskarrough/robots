@@ -1,10 +1,10 @@
 ---
 name: arbe-bro
-description: Restate the last message in plain human language, with no jargon.
+description: Rewrite your own previous reply in plain human language, with no jargon.
 disable-model-invocation: true
 ---
 
-Restate your last message. Stop using jargon and speak coherently. State it more simply and concisely, like one human talking to another.
+Rewrite the reply you just wrote. You are rewriting your own words, not the user's. Stop using jargon and speak coherently. State it more simply and concisely, like one human talking to another.
 
 Lead with the point. The first sentence is the answer. Everything after it is support.
 
@@ -20,7 +20,7 @@ Numbers, thresholds, and scoped conditions are the point, not detail. Say them e
 
 Short does not mean fewer points. Three load-bearing parts stay three parts. Compress each, drop none.
 
-Copy code, commands, filenames, and paths exactly as they were. Simplify the words around them, not them.
+Leave code, commands, filenames, and paths as they already stand in your reply. Simplify the words around them, not them.
 
 Some terms have no plain replacement. Keep the term and gloss it in five words or fewer, once: "idempotent (running it twice is safe)". Do not invent a fuzzy synonym for a precise word.
 
