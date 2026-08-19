@@ -27,31 +27,56 @@ Sections follow the run: **pick → start → brief → watch → review → res
 
 ## 1. Pick a worker
 
-Kind first, model second. Strength ladder: **gpt-5.6-sol > Opus 5 > deepseek**.
+Three axes, and no model wins all three: **price, speed, trust** — trust being how smart it is and therefore how much of its diff you can take on faith.
 
-Need an Anthropic model? `--kind claude`. Claude Code runs on the Claude subscription — free at the margin, good at log-tracing and timing analysis.
+So pick per role, not per task:
+
+- **orchestrator** — smart. That's you.
+- **implementer** — the cheapest model that can hold the brief.
+- **reviewer** — smart, and never the model that wrote the diff.
+
+A smart model doing direction and review, with a cheap fast one implementing between them, beats one expensive model doing all three — cheaper, and usually better, because the reviewer reads the diff cold. That only holds while the review actually happens (§6): cheap implementation without it is just cheap. Escalate the implementer when a brief keeps failing, not by default.
+
+Kind first, model second. The kind picks which account pays.
+
+| account | reach it with | what it's for |
+| --- | --- | --- |
+| Anthropic sub | `--kind claude` | Anthropic models. Log-tracing, timing analysis, the review gate. |
+| Codex sub | `--kind pi --provider openai-codex` | sol — the strongest implementer. Reach it this way, never the `openai/...` id: that routes via OpenRouter and pays per token for a model the sub already covers. |
+| Cursor sub | `--kind cursor` | grok. Effort is baked into the id (`-low`/`-medium`/`-high`/`-xhigh`), not a `:suffix` like pi. **Never a `-fast` variant** (Oskar, 2026-08-18) — on grok they cost far too much for the latency they buy. Its catalogue also lists Anthropic and sol ids; ignore those. `cursor-agent models` lists everything. |
+| OpenRouter credits | `--kind pi` (its default provider) | everything else, deepseek included. Paid per token. |
+
+pi takes `--model "provider-model-id:<thinking-level>"`, where the suffix sets thinking effort.
 
 ```sh
 herdr agent start <name> --kind claude --pane <pane-id>
-```
 
-Anything else? `--kind pi`, which holds the OpenRouter key (so: every model) and the ChatGPT subscription. `--model "provider-model-id:<thinking-level>"`, where the suffix sets thinking effort:
-
-```sh
 herdr agent start <name> --kind pi --pane <pane-id> -- \
   --provider openai-codex --model "gpt-5.6-sol:high"
+
+herdr agent start <name> --kind cursor --pane <pane-id> -- \
+  --model cursor-grok-4.6-high
 ```
 
-| model | pick it for |
-| --- | --- |
-| `deepseek/deepseek-v4-flash-0731:high` (`--provider openrouter`) | well-specified legwork on a tight brief — renames, ports, single-module features, proof/test runs. Paid, but very cheap and strong for the price. |
-| `deepseek/deepseek-v4-pro-0813:high` | briefs flash has failed twice. Stronger, pricier. |
-| `gpt-5.6-sol:medium` (`--provider openai-codex`) | the workhorse — very stable, right for most implementation briefs, and for anything spanning layers. |
-| `gpt-5.6-sol:high` | the hardest, highest-trust work only: cross-layer changes, subtle concurrency, a diff you'd otherwise review line-by-line. |
+Ratings are Oskar's, from running these as workers. Price is what it costs *you*, so a subscription model reads cheap even when the same weights cost money elsewhere.
 
-sol is free on the ChatGPT sub while the quota lasts, but the quota is shared — that's what pushes routine legwork down to deepseek, not price alone. Never use the `openai/...` variant of sol; it routes via OpenRouter and burns paid tokens for the same model.
+| model | price | speed | trust | use it as |
+| --- | --- | --- | --- | --- |
+| `deepseek/deepseek-v4-flash-0731:high` | very cheap | fast | medium | the default implementer. Well-specified legwork on a tight brief — renames, ports, single-module features, proof/test runs. |
+| `deepseek/deepseek-v4-pro-0813:high` | cheap | medium | medium-high | implementer for briefs flash has failed twice. |
+| `cursor-grok-4.6-high` (`--kind cursor`) | sub | fast | medium-high | implementer. `cursor-grok-4.5-high` is the older sibling. |
+| `gpt-5.6-sol:medium` (Codex sub) | sub | medium | high | the workhorse implementer — very stable, right for anything spanning layers. |
+| `gpt-5.6-sol:high` | sub | slow | highest | implementer for the hardest work only: cross-layer changes, subtle concurrency, a diff you'd otherwise review line-by-line. |
+| Opus 5 (`--kind claude`) | sub | medium | highest | the reviewer, and the escalation target when a worker spins. |
+
+**Which account has headroom changes week to week, and none of it is inferable from this file — ask Oskar before assuming anything is free.** The two tables above are the only place volatile ids and accounts live; nothing below depends on today's prices.
+
+**Don't reach for Anthropic models from inside pi** (Oskar, 2026-08-18). When a pi worker wants a cheap model — its own subagents, or a script it writes — that's deepseek flash or luna, not haiku. Anthropic capacity is for `claude` workers. A worker that ignores this gets a 402 "requires more credits" from pi's OpenRouter key, which reads exactly like a genuine out-of-credits blocker and stops it dead; recognise that shape and re-point the model instead of escalating an outage.
+
+A worker measuring a model's latency should measure it where it already runs rather than calling the model itself — for arbe, post to a real thread and read `arbe thread trace`, which exercises arbe's own key. Prompt size can be counted offline with no API call at all.
 
 - Prefer flash at `:high` over `:xhigh` — xhigh loops on flash. A pane already stuck on xhigh is fine to use; don't fight the picker.
+- `:high` is the ceiling for workers generally, not just flash (Oskar, 2026-08-18). xhigh buys little on a well-scoped brief and costs real time. Reach past high only for a brief you'd otherwise review line-by-line.
 - Flash via OpenRouter dies mid-turn with `Error: Provider finish_reason: error` during long thinking (4x in one session, 2026-08-15). The session survives: prompt "continue, that was a transient provider error". If it recurs on the same task, move the pane to pro.
 - Flash's real failure mode (2026-08-15): a brief that silently requires restructuring a state machine (batching seam calls forced a cell commit-flow redesign) sends it into a reasoning spiral instead of an `ORCHESTRATOR:` question — it won't recognize "this needs a design pass" on its own. If a brief crosses into state or commit-flow territory, re-slice so the worker stays in one module, or send it up the ladder. Watching the pane's reasoning for spirals is part of the review loop.
 - An invalid `model:level` string does not error. pi warns `Model ... not found for provider` and falls through to a custom model id with thinking off. Check for that line or the statusline after start.
@@ -84,7 +109,28 @@ sol is free on the ChatGPT sub while the quota lasts, but the quota is shared �
    herdr pane close <pane-id>
    ```
 
-## 3. Brief
+## 3. Check who owns the files
+
+The working copy is shared. Two workers briefed into the same files will fight, and you will not
+notice until a commit lands with someone else's half-finished edit in it. Spend ten seconds before
+every brief:
+
+```sh
+jj status                              # what is uncommitted right now, and whose it is
+jj diff -r @- --stat                   # what the last worker just committed
+```
+
+Name the off-limits files in the brief itself. A worker cannot see the other panes and has no way to
+discover the conflict on its own, so "do not edit X, Y, Z — another worker owns them; if your change
+genuinely requires one, stop and ask" is the whole fix. Pair it with the standing rule to commit only
+its own files.
+
+Watch for the near-misses, not just the overlaps: a UI worker owning a shared layout and stylesheet
+will collide with *any* later worker told to "add a banner", because that is where banners go
+(2026-08-18). Human-driven panes count — the human edits in panes too, and their work is invisible to
+you unless you look at the working copy.
+
+## 4. Brief
 
 Scope one ask small. Asks routinely balloon to 15–30 minutes of worker time; the default should be one mechanism, one commit, one report — about 5–10 minutes. Split the rest into follow-up prompts. A genuinely deep task may deserve a long ask, but that's the exception.
 
@@ -93,17 +139,17 @@ Deliver in deployable increments. Size an ask so its result can be reviewed and 
 - **Brief via file, not prompt.** Write it to `brief-<task>.md` and prompt the worker with the path plus "follow it exactly, including the binding rules". Briefs stay reviewable and reusable across resets; prompts stay atomic.
 - **Draft the brief personally** (Oskar, 2026-08-15). A first-look worker's report is input — its scope questions and findings feed the brief — but the brief text is big-model work: it encodes the design decisions, and a cheap worker's draft needs the same review effort as writing it fresh. Don't delegate brief-drafting down the ladder.
 - **The task carries the substance, the brief carries the run mechanics.** What/why/done-when/evidence live in the tracked task so any agent can pick it up cold. The brief holds this run's mechanics: commit fileset, report path, rules reminder, anything that must stay out of the durable record. A good task shrinks the brief to a few lines.
-- **Reports are files, committed.** The worker writes `tmp/worker-reports/<task>.md`, includes it in its commit fileset, and posts a one-line result to the team inbox. Review the report and the diff, not pane scrollback.
+- **Reports are untracked scratch.** The worker writes its report to a scratch path (`tmp/worker-reports/<task>.md` in arbe) and posts a one-line result to the team inbox. Review the report and the diff, not pane scrollback. Scratch dirs are usually gitignored, so **never tell a worker to name one in a commit fileset** — say in the brief that the report stays untracked, and that you will read it from disk and distil the durable version into the tracked task. If a worker's *output itself* must be tracked, give it a real path in the tree, not a scratch one.
 - **Tracked tasks are the shared ledger.** Claim before work (`--status in_progress`). Put scope cuts and evidence in the task body (update via `--stdin` JSON). Close with what shipped in the reason.
 - **Spell out ownership and vocabulary.** Workers follow both perfectly when told and trip when not: who owns gated actions ("write the migration, do NOT push — the orchestrator is classifier-gated"), and the exact enums they'll write ("close with `closed`; `in_review` does not exist"). Answer their decision points explicitly.
-- **jj rules.** A worker may run exactly one mutating jj command, `jj commit -- <its own files>`, when done. Forbid squash/amend/restore/abandon/new in the brief. The working copy is shared; a confused worker doing "history repair" once folded its commit into @ and jumbled three agents' files. A worker that thinks history needs reshaping reports that and stops.
-- **Restate the blocker rule.** Workers inherit the project's AGENTS.md, but abstract rules don't stop a mid-task spiral. When the task touches infra, put it in the brief: on any blocker (out-of-credits key, dead dev server, missing auth), report `blocked` in one line and stop, no workarounds. One worker once spent ~2.6M read tokens routing around a 402. The concrete arbe list lives in arbe's AGENTS.md "STOP at blockers".
+- **jj rules.** A worker commits its own files with `jj commit -- <its files>`, as often as it usefully can — that is the point of jj, nothing is pushed, and describe/split can reshape it later. There is no cap on how many times (Oskar, 2026-08-19: "drop that 1 commit rule"). Point the brief at arbe-jj-jujutsu and make its commit rules binding: filesets are globs so bracketed paths need `cwd:"..."`, and every commit is followed by `jj diff -r @- --stat` to confirm the file list is what was named. That check matters more the more often a worker commits — an unmatched path commits nothing and still reports success, and three workers hit it in one session (2026-08-18). What stays forbidden is history surgery: squash/amend/restore/abandon/new. The working copy is shared; a confused worker doing "history repair" once folded its commit into @ and jumbled three agents' files. A worker that thinks history needs reshaping reports that and stops.
+- **Restate the blocker rule.** Workers inherit the project's AGENTS.md, but abstract rules don't stop a mid-task spiral. When the task touches infra, put it in the brief: on any blocker (out-of-credits key, dead dev server, missing auth), report `blocked` in one line and stop, no workarounds. One worker once spent ~2.6M read tokens routing around a 402. The concrete arbe list lives in arbe's AGENTS.md "STOP at blockers". Say the same about your own fences (Oskar, 2026-08-18): tell the worker that any rule in the brief blocking the right fix is to be reported, not routed around — a scope fence that forces a detour costs more than the conflict it was avoiding.
 
 **Give the worker a return channel — every time.** A worker has no way to "message the orchestrator"; its only channel is its own pane, read when it settles. Workers that don't know this go looking (2026-08-15: a blocked worker hunted for a thread/CLI channel to ask its question). Put this contract in every brief:
 
 > To ask the orchestrator anything or report a blocker: stop, print one final line starting with `ORCHESTRATOR: <question or blocker>`, and end your turn. Your settled pane IS the message — it is read promptly. Do not look for another channel; do not work around the question.
 
-## 4. Watch and steer
+## 5. Watch and steer
 
 Poll `herdr agent list` whenever you regain control, and read a settled pane's tail before anything else. An idle worker is a finished report waiting for review.
 
@@ -125,13 +171,15 @@ herdr agent send-keys <name> esc
 - **`STEERING:` mid-flight.** A prompt prefixed that way reshapes scope or delivery without losing work; workers absorb it like a user typing into their session. Send follow-ups as separate prompts, never as an omnibus brief.
 - **The human talks to panes too.** They may steer or approve inside a worker pane directly, so "approved mid-session" in a report can be genuine input you never saw. Read the pane and report before assuming state, and reconcile what happened into the task body.
 
-## 5. Review gate
+## 6. Review gate
 
-The house combo is a deepseek worker plus big-model review: cheap strong implementation, with an Opus 5 / Sonnet 5 agent reviewing every non-trivial diff before it ships. Small diffs the orchestrator reviews personally. Review design and compactness, not just correctness; ask for cleaner rework instead of accepting sprawl. If a worker spins or stays weak, escalate up the ladder instead of re-briefing endlessly — usually to Opus 5 via `--kind claude`.
+This is the half that makes a cheap implementer safe (§1), so it is not optional: an Opus 5 / Sonnet 5 agent reviews every non-trivial diff before it ships. Small diffs the orchestrator reviews personally. Review design and compactness, not just correctness; ask for cleaner rework instead of accepting sprawl. If a worker spins or stays weak, escalate the implementer instead of re-briefing endlessly — usually to Opus 5 via `--kind claude`.
+
+**A worker's "checks pass" is not proof.** Require the pasted output, not the claim. A worker reported `bun run check` and `bun run test` passing on a commit that failed typecheck with five errors (2026-08-18); it shipped and blocked every other worker's gate until a different worker tripped over it. Workers report from memory of an earlier run, or from a scoped check run before their last edits. Put "run the full gate and paste the output" in the brief, and spot-check anything that lands. On a shared working copy one red commit blocks every other worker, and whoever broke it is usually idle by the time anyone notices. Watch for the shape that causes it: a change that adds a variant to a union — a new step kind, enum member, event type — and updates the producer but not every consumer. Name the consumers in the brief when you can see them.
 
 Re-review fixes independently. After workers fix review findings, spawn a fresh pane with a stronger model and brief it to verify each fix against the original review's attack scenarios. This once caught a regression the implementer and the orchestrator's own diff review both missed: the fix's test suite encoded the bug as intended behavior, so running tests could never surface it. A different reviewer beats re-running tests.
 
-## 6. Reset between tasks
+## 7. Reset between tasks
 
 A long-lived worker accumulates context and starts spinning in circles: re-litigating old decisions, rabbit-holing. After a task's report is in, wipe the session before the next brief:
 
@@ -151,7 +199,7 @@ herdr agent prompt <name> "/new" --wait --timeout 15000
 - **`agent_pane_busy` right after `pane split`** ("not an available shell"): the shell hasn't spawned yet. Wait ~5–10s and retry once. Still refusing means a dud pane; close it and split fresh. `pane run "true"` can't wake a shell-less pane, and don't swallow `agent start` stderr. Persistent refusals track `--no-focus` (step 1). Reliable recipe: split focused, start the agent, then relocate the live worker with `herdr pane move <pane-id> --tab <tab-id> --split right|down --target-pane <sibling>`. `pane move` never disturbs the agent, but it silently no-ops (`changed:false, reason:"zoomed_tab"`) while the source tab is zoomed — `herdr pane zoom <pane-id> --off` first.
 - **`--source recent-unwrapped` can return empty for pi panes**; `visible` works.
 - **A prompt sent while pi is self-compacting is silently eaten.** The call returns but the worker stays idle. If `agent_status` never leaves idle, read the pane and re-send if compaction just finished. If the pane shows "Queued message for after compaction", it will fire on its own — don't re-send. Don't `esc` a compaction near the finish line; cancelling wastes the whole pass.
-- **A pi worker on `--provider openai-codex` still fans its own subagents out via OpenRouter.** An OpenRouter 402 kills the worker's delegation even though its main model is fine (2026-08-15: three librarian subagents died, worker correctly reported blocked). Surface the top-up to the human, then steer the worker to read directly with its own model; code-editing briefs need no LLM fan-out anyway.
+- **Tell workers not to fan out to subagents at all.** A pi worker's subagents route independently of its main model and die two ways: an OpenRouter 402 even when the worker's own provider is fine (2026-08-15, three librarian subagents), and expired Anthropic OAuth with `invalid_grant` when they default to Anthropic (twice, 2026-08-18). Both surface as the worker reporting `blocked` on what is really the house rule biting from underneath. A code-reading or code-editing brief needs no LLM fan-out: say "read the files directly with your own model, do not spawn subagents". Steer past it yourself when it happens — re-authing to make a forbidden path work is the wrong fix. Surface a genuine top-up to the human.
 - **Switching a pi model mid-session.** `/model` opens a picker and leaves it open — the next prompt types into its fuzzy filter and does nothing, while `--wait` settles as if done. The full `id:level` string matches nothing there ("No matching models"); the `:level` suffix breaks the filter. Working recipe (2026-08-15): `/model <short-filter>` (e.g. `v4-pro`), read the pane to confirm the filtered list, `send-keys <name> enter` to take the top match, then confirm the statusline. Thinking level carries over from the pane's start args, so only the model id changes. Even then the switch can silently not take — if the model matters, rebuild the pane with the right start args instead of fighting the picker. Claude Code workers take `/model opus` directly, no picker; confirm the statusline before briefing.
 
 ---
