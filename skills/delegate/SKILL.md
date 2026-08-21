@@ -44,6 +44,7 @@ Kind first, model second. The kind picks which account pays.
 | Anthropic sub | `--kind claude` | Anthropic models. Log-tracing, timing analysis, the review gate. |
 | Codex sub | `--kind pi --provider openai-codex` | sol — the strongest implementer. Reach it this way, never the `openai/...` id: that routes via OpenRouter and pays per token for a model the sub already covers. |
 | Cursor sub | `--kind cursor` | grok. Effort is baked into the id (`-low`/`-medium`/`-high`/`-xhigh`), not a `:suffix` like pi. **Never a `-fast` variant** (Oskar, 2026-08-18) — on grok they cost far too much for the latency they buy. Its catalogue also lists Anthropic and sol ids; ignore those. `cursor-agent models` lists everything. |
+| OpenCode Zen (beta) | `opencode2` | Ox Alpha Free. This is the OpenCode 2 beta executable, not the older `opencode`; free while the preview lasts. |
 | OpenRouter credits | `--kind pi` (its default provider) | everything else, deepseek included. Paid per token. |
 
 pi takes `--model "provider-model-id:<thinking-level>"`, where the suffix sets thinking effort.
@@ -58,10 +59,29 @@ herdr agent start <name> --kind cursor --pane <pane-id> -- \
   --model cursor-grok-4.6-high
 ```
 
+OpenCode 2 names Ox Alpha as `opencode/x-preview-f-free`; `high` is the normal worker effort. The verified non-interactive form is:
+
+```sh
+opencode2 run --model "opencode/x-preview-f-free#high" --agent build --auto "<prompt>"
+```
+
+Its interactive worker form is `opencode2 mini --model "opencode/x-preview-f-free"`. **Do not substitute `opencode`: that is the older client.** herdr 0.8.2 only starts named workers through `--kind opencode`, whose canonical executable is the old client, but no integration is required to use v2 in a pane. Start it with pane primitives:
+
+```sh
+herdr pane run <pane-id> 'opencode2 mini --model opencode/x-preview-f-free'
+herdr pane send-text <pane-id> 'follow brief-task.md exactly'
+herdr pane send-keys <pane-id> enter
+herdr pane get <pane-id> | jq -r .result.pane.agent_status  # working → idle
+herdr pane read <pane-id> --source visible --lines 40
+```
+
+This path is tested: herdr detects the process as an idle/working `opencode` pane and Ox answers normally. What it lacks is registration under a unique name, so `herdr agent prompt <name> --wait` cannot address it; use the pane ID, poll `pane get`, and only close the pane you created. A proper herdr `opencode2` kind would add naming and blocking prompts, but is convenience rather than a prerequisite.
+
 Ratings are Oskar's, from running these as workers. Price is what it costs *you*, so a subscription model reads cheap even when the same weights cost money elsewhere.
 
 | model | price | speed | trust | use it as |
 | --- | --- | --- | --- | --- |
+| `opencode/x-preview-f-free#high` via `opencode2` | free preview | fast | high | Ox Alpha Free. Powerful implementer for coding, agentic work, and tool use; 1M context. Prefer while the preview is free; use the pane fallback above until herdr has a named `opencode2` kind. |
 | `deepseek/deepseek-v4-flash-0731:high` | very cheap | fast | medium | the default implementer. Well-specified legwork on a tight brief — renames, ports, single-module features, proof/test runs. |
 | `deepseek/deepseek-v4-pro-0813:high` | cheap | medium | medium-high | implementer for briefs flash has failed twice. |
 | `cursor-grok-4.6-high` (`--kind cursor`) | sub | fast | medium-high | implementer. `cursor-grok-4.5-high` is the older sibling. |
@@ -69,7 +89,7 @@ Ratings are Oskar's, from running these as workers. Price is what it costs *you*
 | `gpt-5.6-sol:high` | sub | slow | highest | implementer for the hardest work only: cross-layer changes, subtle concurrency, a diff you'd otherwise review line-by-line. |
 | Opus 5 (`--kind claude -- --model opus --effort <level>`) | sub | medium | highest | the reviewer, and the escalation target when a worker spins. `--effort xhigh` for hard implementation work — cross-layer changes, auth, a diff you'd otherwise review line by line. Claude Code takes `--model`/`--effort` as start args, applied at launch with no picker to fight. |
 
-**Which account has headroom changes week to week, and none of it is inferable from this file — ask Oskar before assuming anything is free.** The two tables above are the only place volatile ids and accounts live; nothing below depends on today's prices.
+**Which account has headroom changes week to week, and none of it is inferable from this file — ask Oskar before assuming anything is free.** Ox Alpha is the explicit temporary exception: its catalogue currently reports zero input, output, and cache-read cost, but preview pricing can disappear without notice. The two tables above are the only place volatile ids and accounts live; nothing below depends on today's prices.
 
 **Don't reach for Anthropic models from inside pi** (Oskar, 2026-08-18). When a pi worker wants a cheap model — its own subagents, or a script it writes — that's deepseek flash or luna, not haiku. Anthropic capacity is for `claude` workers. A worker that ignores this gets a 402 "requires more credits" from pi's OpenRouter key, which reads exactly like a genuine out-of-credits blocker and stops it dead; recognise that shape and re-point the model instead of escalating an outage.
 
