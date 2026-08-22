@@ -27,6 +27,13 @@ for (const target of targets) {
   }
 }
 
+// Frontmatter keys that only mean something to one target and are stripped
+// from the copies written for the others.
+const targetOnlyKeys = ["model_claude"];
+
+const claudeFamilies = ["haiku", "sonnet", "opus"] as const;
+const thinkingLevels = ["off", "low", "medium", "high", "xhigh"];
+
 function parseAgent(source: string, filename: string): Agent {
   const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
   if (!match) throw new Error(`${filename}: missing YAML frontmatter`);
@@ -46,6 +53,11 @@ function parseAgent(source: string, filename: string): Agent {
 
   const name = basename(filename, ".md");
   if (!metadata.description) throw new Error(`${filename}: description is required`);
+  if (metadata.thinking && !thinkingLevels.includes(metadata.thinking)) {
+    throw new Error(
+      `${filename}: thinking '${metadata.thinking}' must be one of ${thinkingLevels.join(", ")}`,
+    );
+  }
 
   return {
     name,
@@ -55,36 +67,44 @@ function parseAgent(source: string, filename: string): Agent {
   };
 }
 
-function parseTools(value: string | undefined): string[] | undefined {
-  if (!value || value === "all" || value === "*") return undefined;
-  return value.split(",").map((tool) => tool.trim().toLowerCase());
-}
-
-function claudeTools(value: string | undefined): string | undefined {
-  const tools = parseTools(value);
-  if (!tools) return undefined;
-
-  const aliases: Record<string, string> = {
-    read: "Read",
-    write: "Write",
-    edit: "Edit",
-    bash: "Bash",
-    grep: "Grep",
-    find: "Glob",
-    ls: "Glob",
-  };
-  const mapped = [...new Set(tools.map((tool) => aliases[tool]))];
-  const unknown = tools.filter((tool) => !aliases[tool]);
-  if (unknown.length) throw new Error(`Unsupported Claude tools: ${unknown.join(", ")}`);
-  return mapped.join(", ");
-}
-
-function claudeModel(value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  for (const family of ["haiku", "sonnet", "opus"] as const) {
-    if (value.toLowerCase().includes(family)) return family;
+// `model` is written for Pi, which takes provider-prefixed ids. Claude only
+// understands the three families, so an agent whose Pi model is another
+// vendor's declares `model_claude` alongside it.
+function claudeModel(agent: Agent): string | undefined {
+  const explicit = agent.metadata.model_claude;
+  if (explicit) {
+    const family = claudeFamilies.find((f) => explicit.toLowerCase().includes(f));
+    if (!family) {
+      throw new Error(
+        `${agent.name}: model_claude '${explicit}' is not one of ${claudeFamilies.join(", ")}`,
+      );
+    }
+    return family;
   }
-  throw new Error(`Cannot map model '${value}' to a Claude model family`);
+  const value = agent.metadata.model;
+  if (!value) return undefined;
+  return claudeFamilies.find((f) => value.toLowerCase().includes(f));
+}
+
+function claudeEffort(value: string | undefined): string | undefined {
+  if (!value || value === "off") return undefined;
+  return value;
+}
+
+function codexEffort(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value === "off") return "low";
+  if (value === "xhigh") return "high";
+  return value;
+}
+
+function stripForeignKeys(source: string, keys: string[]): string {
+  return source.replace(/^---\r?\n([\s\S]*?)\r?\n---/, (_full, body: string) => {
+    const kept = body
+      .split(/\r?\n/)
+      .filter((line) => !keys.some((key) => line.startsWith(`${key}:`)));
+    return `---\n${kept.join("\n")}\n---`;
+  });
 }
 
 function renderClaude(agent: Agent): string {
@@ -93,20 +113,15 @@ function renderClaude(agent: Agent): string {
     `name: ${agent.name}`,
     `description: ${JSON.stringify(agent.metadata.description)}`,
   ];
-  const tools = claudeTools(agent.metadata.tools);
-  const model = claudeModel(agent.metadata.model);
-  if (tools) lines.push(`tools: ${tools}`);
+  const model = claudeModel(agent);
+  const effort = claudeEffort(agent.metadata.thinking);
   if (model) lines.push(`model: ${model}`);
-  if (["low", "medium", "high"].includes(agent.metadata.thinking)) {
-    lines.push(`effort: ${agent.metadata.thinking}`);
-  }
+  if (effort) lines.push(`effort: ${effort}`);
   lines.push("---", "", agent.prompt.trimEnd(), "");
   return lines.join("\n");
 }
 
 function renderCodex(agent: Agent): string {
-  const tools = parseTools(agent.metadata.tools);
-  const readOnly = tools && !tools.some((tool) => tool === "write" || tool === "edit");
   const lines = [
     `name = ${JSON.stringify(agent.name)}`,
     `description = ${JSON.stringify(agent.metadata.description)}`,
@@ -115,12 +130,8 @@ function renderCodex(agent: Agent): string {
   if (agent.metadata.display_name) {
     lines.push(`nickname_candidates = [${JSON.stringify(agent.metadata.display_name)}]`);
   }
-  if (readOnly) lines.push('sandbox_mode = "read-only"');
-  if (["low", "medium", "high"].includes(agent.metadata.thinking)) {
-    lines.push(`model_reasoning_effort = ${JSON.stringify(agent.metadata.thinking)}`);
-  } else if (agent.metadata.thinking === "off") {
-    lines.push('model_reasoning_effort = "low"');
-  }
+  const effort = codexEffort(agent.metadata.thinking);
+  if (effort) lines.push(`model_reasoning_effort = ${JSON.stringify(effort)}`);
   return lines.join("\n") + "\n";
 }
 
@@ -145,7 +156,8 @@ const agents = await Promise.all(
 for (const target of targets) {
   for (const agent of agents) {
     if (target === "pi") {
-      await writeAtomic(join(home, ".pi", "agent", "agents", `${agent.name}.md`), agent.source);
+      const source = stripForeignKeys(agent.source, targetOnlyKeys);
+      await writeAtomic(join(home, ".pi", "agent", "agents", `${agent.name}.md`), source);
     } else if (target === "claude") {
       await writeAtomic(join(home, ".claude", "agents", `${agent.name}.md`), renderClaude(agent));
     } else {

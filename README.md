@@ -25,6 +25,10 @@ them into Pi and renders the corresponding Claude Markdown and Codex TOML:
 - Claude Code: `~/.claude/agents/*.md`
 - Codex: `~/.codex/agents/*.toml`
 
+`model:` is the Pi model id (`provider/id`, e.g. `openai-codex/gpt-5.6-sol`).
+Claude only understands `haiku`/`sonnet`/`opus`, so agents on another vendor's
+model declare `model_claude:` alongside it; that key is stripped from the Pi copy.
+
 Re-run the installer after changing an agent. Existing files with the same
 three agent names are replaced; unrelated agents are left alone.
 
