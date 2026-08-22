@@ -47,3 +47,25 @@ SKILLS
 To create a new skill: 
     Run `bunx skills init skills/my-skill`.
     Add a link to the skill in the README.md.
+
+Installing copies each skill into `~/.agents/skills/<name>/` and symlinks it
+into the agent directories (`~/.claude/skills/<name>`, etc.). That copy is
+device-local, so always land edits through git — several machines run these,
+and an install that skipped the push leaves no way to tell which machine is
+right:
+
+1. Edit `skills/<name>/SKILL.md`
+2. Commit and push to `main`
+3. `bunx skills update -g -y` (or `bunx skills update arbe-delegate` for one)
+
+While iterating you can install straight from the working copy, uncommitted
+edits included:
+
+    bunx skills add ~/Sites/robots -g -y -s '*'
+
+Close that loop with a push. Until you do, this machine is the only one with
+the change, and the next `skills update` silently reverts it.
+
+That command reports `Failed to install 12` even when it worked — the
+PromptScript target refuses `-g` and the CLI counts it as total failure. Check
+`~/.agents/skills/<name>/SKILL.md` rather than the banner.

@@ -7,113 +7,62 @@ description: Triage a backlog, design doc, or feature area and prepare work so i
 
 Triage and prepare work so each piece is ready to hand to a builder agent.
 
-Two senses of "dispatch" — keep them straight:
-- **Preparing tasks** (this skill): you triage the backlog and make each task actionable. You recommend an execution order; the human launches the builder agents (or you do, if asked). You don't start building the tasks yourself.
-- **Investigating to triage** (the arbe prompt): delegate freely. Fan out `librarian` to locate scope and `oracle` to weigh a design call rather than reading everything yourself. Triaging well means leaning on subagents to answer the questions for you — that's encouraged here, not forbidden.
-
-So: delegate hard for the *investigation*, but don't silently start *implementing* the tasks you're triaging. Surface the plan first.
-
-Once the plan is approved and it's time to launch builders, `arbe-delegate` covers the mechanics — spawning panes, choosing a worker kind and model, briefing, and reading results back.
+Delegating to investigate and delegating to build are easy to blur. Investigate freely — `librarian` to locate scope, `oracle` to weigh a design call — rather than reading everything yourself. But don't start building the tasks you're triaging: make each one actionable, recommend an order, and let the human approve the plan. Once it's approved, `arbe-delegate` covers launching the builders.
 
 ## Process
 
-If the entry point is unclear, ask: **focus on a design doc, a set of tasks,
-a feature area, or the full backlog?** If the user already named one, begin
-there.
+If the entry point is unclear, ask whether to focus on a design doc, a set of tasks, a feature area, or the full backlog. If the user named one, begin there.
 
-Work through one issue at a time. Each pass: surface one finding, include a concrete recommendation, and wait for the human's call before moving on. Don't batch findings into walls of text.
+Surface one finding with a concrete recommendation, then wait for the human's call. Walls of findings hide decisions.
 
-Always refer to tasks by title, not just ID — IDs are not memorable.
+Refer to tasks by title, not just ID. IDs are not memorable.
 
 ### 0. Establish project context
 
-Read the repository's local instructions and relevant docs first. Determine
-whether this project uses a task system and which one. Trust explicit
-project-local evidence such as `AGENTS.md`, `CONTRIBUTING.md`, repository docs
-or config, and the user's direction.
+Use the project's own tracker when local instructions, docs, config, or the user explicitly bind one to this repository. An installed tool, personal tracker, or neighbouring project's tracker proves nothing. No tracker is a valid state; keep proposed tasks in the conversation rather than inventing or initializing one.
 
-The evidence must explicitly bind the task system to this repository's
-development work. An instruction that only routes personal context or personal
-tasks elsewhere does not establish a tracker for the current project. Do not
-leave a code repository to inspect personal notes merely to discover a task
-system; feature-area triage normally needs only project context.
+When a tracker exists, pull its existing tasks for the area first so the triage does not duplicate them.
 
-The presence of an installed CLI, connector, global skill, personal tracker,
-or tracker used by another project is not evidence. Do not initialize a task
-system or fall back to an unrelated one. A project with no tracker is valid:
-ground the triage in its code, docs, and the user's request, and keep proposed
-tasks in the conversation until the human asks to record them somewhere.
+Choose the entry path:
 
-When the project has a task system, **pull the existing tasks for the area
-first using that system's native workflow**. Triage is against what's already
-tracked so the punch-list does not duplicate it.
+- For a feature area, map the code and existing tasks. Ask what is half-built, what is wrong, and what is in scope before proposing tasks.
+- For a design doc, compare the doc with the code and existing tasks. Surface whether it is fully, partly, or not yet decomposed, or obsolete. With approval, make each task actionable without rereading the doc. Preserve any deferred remainder in the tracker or handoff.
+- For supplied tasks or a filter, pull the set and check whether each description is actionable.
+- For a full backlog, pull everything open and group a long list by theme. If no backlog location is established, ask where it lives.
 
-**Feature area / code surface** — when the human points at a surface, not a doc or task list ("work the workflows UI", "the auth flow"):
-- Fan out `librarian` to map what exists and how it's built. If the project has
-  a task system, list the open tasks already filed against that area in the
-  same pass.
-- Then surface intent questions grounded in both: what's half-built, what's bugging the user, what's in/out of scope.
-- Decompose into tasks only with approval, same as below.
-
-**Design doc** — when the human points at a doc under `docs/` (often `docs/specs/`):
-- Read the doc. Is it still accurate, or has the codebase moved past it?
-- If the project has a task system, check which tasks already exist for it. Are
-  they complete, partial, or missing?
-- Surface one finding at a time: "this is fully decomposed" or "no tasks yet, want me to decompose it?" or "this contradicts the code now, probably obsolete — want me to open a task to revisit?"
-- Decompose into tasks only with approval. Each task should be actionable without re-reading the doc — pull the relevant context into the task description.
-- If partially decomposed and the rest isn't being tackled now, preserve that
-  remainder in the project's task system only when one exists and the human
-  approves. Otherwise include it in the handoff so it is not silently dropped.
-
-**Tasks** — when the human points at specific tasks or a filter (priority, type, tag):
-- Pull the set with the project's task system or use the tasks supplied by the
-  human.
-- Skim descriptions. Are they actionable as-is, or do some need fleshing out?
-- Proceed to step 1.
-
-**Backlog** — full sweep of everything open:
-- Pull the full picture from the project's task system. If no backlog location
-  is established, ask where it lives instead of choosing one.
-- Group by theme or area if the list is long — triage one group at a time.
-- Proceed to step 1.
+Decompose or record tasks only after approval.
 
 ### 1. Map dependencies
 
-Read every task in the set. Draw the dependency graph: what blocks what, what can parallelize. Flag missing deps and cycles. Offload the "where does this live / what does it touch" lookups to `librarian` so the graph is grounded in the real code, not guesses.
+Read every task in the set. Draw what blocks what and what can run in parallel. Flag missing dependencies and cycles. Use `librarian` to ground file and scope questions in the code.
 
 ### 2. Surface issues
 
-One at a time, in priority order:
+Work through these in priority order, one at a time:
 
-- tasks that must deploy atomically — should they merge or use blocked + a deploy note?
+- work that must deploy atomically; merge it or use a blocked dependency and deploy note
 - duplicate or overlapping tasks
-- tasks whose descriptions are too vague for an agent to act on
-- tasks that touch the same files and will conflict
-- tracking/epic tasks that are cluttering the ready queue
-- missing tasks implied by the design doc but not yet created
-- open design questions that should be captured on the task
+- descriptions too vague for an agent
+- tasks that will conflict in the same files
+- tracking or epic tasks cluttering the ready queue
+- work implied by a design doc but not tracked
+- open design questions missing from the task
 
-For each: state the issue, recommend an action, ask if you should do it.
+For each, state the issue, recommend an action, and ask before changing the task.
 
 ### 3. Verify dispatch readiness
 
-Once issues are resolved, confirm each task has:
-- a description an agent can act on without asking questions
-- correct status when the project tracks statuses
-- dependencies represented in the project's task system when it supports them,
-  otherwise made explicit in the dispatch plan
-- no file-level conflicts with sibling tasks in the same batch
+Confirm each task has:
+
+- enough context for an agent to act without questions
+- the correct status, when statuses are tracked
+- dependencies recorded in the tracker or made explicit in the plan
+- no file conflicts with tasks in the same batch
 
 ### 4. Recommend dispatch order
 
-Present the final plan: which tasks to dispatch in parallel, which sequentially, and why. The human makes the call on launching the builders. Note which tasks aren't worth a worker at all — a one-file edit you already understand is faster done than briefed.
+Present what can run in parallel, what must run sequentially, and why. The human decides when to launch builders.
 
-## Rules
+Some tasks are not worth a worker. A one-file edit you already understand may be faster to do than to brief.
 
-- Don't start implementing the tasks you're triaging — present the plan, the human decides when to dispatch the builders. (Delegating `librarian`/`oracle` to *investigate* is fine and encouraged.)
-- Don't fix task descriptions silently — propose changes, wait for approval.
-- Use only the current project's task system. Never infer one from the skill
-  name, available tools, global or personal context, or a neighboring project.
-- Don't initialize, migrate, or substitute a task system unless the human asks.
-- If a design doc exists, read it before triaging. Tasks should conform to the doc.
-- Keep a mental checklist of everything surfaced. At the end, confirm nothing was dropped.
+Keep track of everything surfaced and confirm the final plan drops nothing.
