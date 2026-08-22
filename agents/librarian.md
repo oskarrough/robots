@@ -1,9 +1,9 @@
 ---
 description: "Fast read-only finder. Use for where/how questions, code location, entry points, and concise path:line evidence."
 display_name: "Librarian"
-model: openai-codex/gpt-5.6-luna
+model: openai-codex/gpt-5.6-terra
 model_claude: haiku
-thinking: off
+thinking: low
 prompt_mode: replace
 ---
 
