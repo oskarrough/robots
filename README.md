@@ -47,6 +47,7 @@ SKILLS
 - [arbe-delegate](skills/delegate/SKILL.md) — run worker agents in herdr panes: spawn, brief, read, steer
 - [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
 - [arbe-bro](skills/bro/SKILL.md) — restate the last message in plain human language
+- [arbe-product-description](skills/product-description/SKILL.md) — outside-in, feature-by-feature behaviour spec of a product, verified and triaged
 
 To create a new skill: 
     Run `bunx skills init skills/my-skill`.
