@@ -55,7 +55,9 @@ herdr agent start <name> --kind pi --pane <pane-id> -- --provider openai-codex -
 herdr agent start <name> --kind cursor --pane <pane-id> -- --model cursor-grok-4.6-high
 ```
 
-**The agent name is the label.** Name by role (`reviewer`, `doc-env`), and the UI plus the agent's own terminal title cover the rest — don't triple-name by also renaming the pane. `pane rename <pane-id> <task>` is for panes with no registered agent (Ox Alpha below, dev servers, log tails), and `tab create --label` when a batch gets its own tab.
+**Every pane and agent you create gets a name — no exceptions.** The name is what the herdr sidebar shows, and it's the only handle you and the human have on a worker; an unnamed or default-named pane is an anonymous box nobody can address or reason about. `agent start` takes the name as its first argument, so there is never a reason to skip it.
+
+Name by role and scope, distinctly (`reviewer`, `doc-env`, `flash-migrate`) — never `claude`, `worker`, or anything you'd reuse. Then stop: the sidebar plus the agent's own terminal title cover the rest, so don't triple-name by also renaming the pane. `pane rename <pane-id> <task>` is for panes with **no** registered agent (Ox Alpha below, dev servers, log tails) — name those too, or the sidebar fills with unlabelled shells. `tab create --label` when a batch gets its own tab.
 
 Ox Alpha has no herdr kind yet (`--kind opencode` is the *older* client). Drive it with pane primitives instead — `herdr pane run <pane-id> 'opencode2 mini --model opencode/x-preview-f-free'`, then `pane send-text` / `send-keys enter` / poll `pane get`. Works, but no registered name, so `agent prompt --wait` can't address it.
 
@@ -84,6 +86,7 @@ Failure modes worth a line in the brief when they apply:
 - **A test can synthesize its own input and prove nothing.** When a fix keys on a field from another service, require a `file:line` citation of the *producing* code. A worker once fixed a handler against `payload.error` where the producer emits `payload.kind`, wrote a test inventing that shape, and shipped green.
 - **Workers guess at ownership and vocabulary** unless told. Who owns gated actions ("write the migration, do NOT push"), and the exact enums they'll write ("close with `closed`; `in_review` does not exist").
 - **jj**: point at `arbe-jj-jujutsu` and make it binding. Delegation-specific: commit only your own files, don't reshape history, report it instead if history looks like it needs repair.
+- **Repo-wide checks go red under a worker's feet on a busy copy** — another worker's *uncommitted* mid-flight edits fail `bun run check`/`test` in files the first never touched, and it settles as blocked with finished work uncommitted. When two workers share the copy, put it in both briefs: red in files outside your fileset is expected — confirm none of the errors are in files YOU touched, verify with scoped checks, commit your own files, and note that repo-green re-verification happens after the tree settles.
 - **A blocker sends workers routing around it** — dead key, dead dev server, missing auth. Ask for one line of `blocked` and a stop. Same for your own fences: a scope rule that blocks the right fix should be reported, not detoured around.
 - **pi subagents route independently of their parent** and die on OpenRouter 402s or expired Anthropic OAuth, surfacing as a fake blocker. For code reading or editing, tell the worker to use its own model and not fan out.
 
@@ -148,7 +151,7 @@ Against a self-contained brief warm context buys nothing and costs drift — inc
 
 - **Always target `pane split` with `--current`** (or an explicit `$HERDR_PANE_ID`). With no target herdr splits the UI-focused pane, which may belong to the human or another client.
 - **Address agents ONLY by registered name, never a pane id.** Retrying a failed `agent prompt` with a pane id once delivered the text to the orchestrator's OWN session *and* other workers' panes. If the target isn't in `agent list`, you can't reach it — relay through the human.
-- **Always pass a distinct `<name>` to `agent start`.** Several panes named `claude` make every agent-addressed command ambiguous, and the pane-addressed fallback is unreliable — `pane send-keys <pane> enter` returns `ok` and sometimes doesn't submit.
+- **Always pass a distinct `<name>` to `agent start`.** Several panes named `claude` make every agent-addressed command ambiguous, and the pane-addressed fallback is unreliable — `pane send-keys <pane> enter` returns `ok` and sometimes doesn't submit. Reused names also collapse in the sidebar, so neither you nor the human can tell which worker is which. Check `agent list` before reusing a name you've used this session.
 - **`--wait` timeout ≠ stuck.** Exits 1 with `{"error":{"code":"timeout"}}` but the worker is usually still working. Do not re-prompt — poll `agent get` until `agent_status` leaves `working`.
 - **`agent_pane_busy` right after `pane split`** means the shell hasn't spawned yet. Wait ~5–10s and retry once; still refusing is a dud pane — close it and split fresh. To relocate a live worker afterwards: `herdr pane move <pane-id> --tab <tab-id> --split right --target-pane <sibling>`. `pane move` never disturbs the agent but silently no-ops on a zoomed tab (`changed:false, reason:"zoomed_tab"`) — `pane zoom <pane-id> --off` first.
 - **`--source recent-unwrapped` can return empty for pi panes**; `visible` works.
