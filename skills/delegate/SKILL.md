@@ -40,7 +40,7 @@ Kind first, model second — the kind picks which account pays.
 | model | price | speed | trust | use it as |
 | --- | --- | --- | --- | --- |
 | `opencode/x-preview-f-free#high` via `opencode2` | free preview | fast | high | Ox Alpha Free. Strong implementer, 1M context. Prefer while free. |
-| `deepseek/deepseek-v4-flash-0731:high` | very cheap | fast | medium | default implementer. Tight briefs — renames, ports, single-module features, test runs. |
+| `deepseek/deepseek-v4-flash-0731:high` | very cheap | fast | low-medium | implementer for tight mechanical briefs — renames, ports, test runs. Never unreviewed (Oskar, 2026-08-23): always gate its diff, and direct it — pin the design, demand a plan checkpoint before edits, steer mid-flight. |
 | `deepseek/deepseek-v4-pro-0813:high` | cheap | medium | medium-high | implementer for briefs flash failed twice. |
 | `cursor-grok-4.6-high` (`--kind cursor`) | sub | fast | medium-high | implementer. |
 | `gpt-5.6-sol:medium` (Codex sub) | sub | medium | high | workhorse implementer — right for anything spanning layers. |
@@ -54,6 +54,8 @@ herdr agent start <name> --kind claude --pane <pane-id> -- --model opus --effort
 herdr agent start <name> --kind pi --pane <pane-id> -- --provider openai-codex --model "gpt-5.6-sol:high"
 herdr agent start <name> --kind cursor --pane <pane-id> -- --model cursor-grok-4.6-high
 ```
+
+**The agent name is the label.** Name by role (`reviewer`, `doc-env`), and the UI plus the agent's own terminal title cover the rest — don't triple-name by also renaming the pane. `pane rename <pane-id> <task>` is for panes with no registered agent (Ox Alpha below, dev servers, log tails), and `tab create --label` when a batch gets its own tab.
 
 Ox Alpha has no herdr kind yet (`--kind opencode` is the *older* client). Drive it with pane primitives instead — `herdr pane run <pane-id> 'opencode2 mini --model opencode/x-preview-f-free'`, then `pane send-text` / `send-keys enter` / poll `pane get`. Works, but no registered name, so `agent prompt --wait` can't address it.
 
@@ -93,6 +95,22 @@ Failure modes worth a line in the brief when they apply:
 
 `herdr agent list` when you regain control; a settled pane is a finished report waiting to be read.
 
+Watching one worker: don't poll — `agent prompt --wait` (or `agent wait`) blocks until the first settled idle/done/blocked state, per `herdr --skill`. Watching several at once: no native multi-agent wait exists (`agent wait` is single-target, `notification` is display-only), so poll `agent list`. The current best-known loop shape — improve it and update this if you find better:
+
+- watch an explicit name list, not everyone: other orchestrators (including the human) run panes in the same session, and their settles are not your business
+- print `.name`, not `.agent` — `.agent` is the kind (`cursor`, `pi`), which tells you nothing when you run two of them
+- report `blocked` immediately (approval dialogs want fast unblocking), but only report idle/done after it persists two polls — cursor flaps working/idle mid-turn and single-poll settles are mostly false
+- don't gate loop exit on a count of working agents; exit when every *watched* name has settled
+
+```sh
+WATCH="worker-a worker-b"; prev=""
+while true; do
+  cur=$(herdr agent list | jq -r --arg w "$WATCH" '.result.agents[] | select(.name as $n | ($w | split(" ") | index($n))) | "\(.name): \(.agent_status)"' | sort)
+  # emit blocked lines at once; diff idle/done against prev to debounce one poll
+  sleep 15
+done
+```
+
 - **A settled Claude Code pane's composer may hold ghost text nobody typed** — a suggested next message in the human's voice, following naturally from the worker's last output, reading exactly like an answer to the question you were about to ask. `send-keys <name> esc` clears it; the only real answer comes from your own conversation with the human.
 - **Deep-in-the-weeds workers respond to a checkpoint.** esc, then ask them to pause without resuming and restate in ~15 lines: goal in one sentence, design as bullets, files touched, anything added that isn't strictly needed. Costs a turn, catches drift and gold-plating before code lands, surfaces design questions they were sitting on. Follow with an explicit go.
 - **"Can it be simpler — reread your diff and cut anything not needed for the goal"** reliably shrinks diffs. Cheap to send before the commit.
@@ -107,6 +125,8 @@ This is what makes a cheap implementer safe, so it's the half not to skip: a str
 - **A regex over source is evidence of nothing.** A hand-rolled "unused import" scan once deleted a live import used at 11 spread sites (`.makeSignalBase(...)` — the leading dot defeated its lookbehind) and would have 502'd every request. Use the language's own tooling, or brief a worker to.
 - **A fix's own test suite can encode the bug as intended behavior**, so re-running tests can't catch it. Verify fixes with a fresh pane and a stronger model, against the original review's attack scenarios.
 - **Your context is for taste, not code-reading.** Reading modules to prep a brief, tracing a flow, line-verifying a diff — all delegable. Keep the conclusion, not the files.
+- **A concurrent commit can absorb your worker's edits or change a contract under them.** jj commits snapshot the working-copy state of the named files, so another pane committing a file your worker edited takes those edits with it — the worker then reports "no remaining diff" on its own commit, which is not failure. And a mid-flight commit can change an API your worker's diff keys on (a helper gaining a parameter broke a just-written correlation). After any fix round on a busy working copy: `jj log` for commits that landed during it, verify with `jj show --stat` where your edits actually live, and point the re-review at interactions with those commits explicitly.
+- **A cheap scout's conclusions can be right while its file:line citations are invented.** Spot-check the two or three load-bearing paths yourself before pasting them into an implementation brief — a brief anchored on hallucinated paths sends the implementer hunting.
 
 ## 5. Reset between tasks
 
@@ -122,6 +142,7 @@ Against a self-contained brief warm context buys nothing and costs drift — inc
 - **Drift looks like** the worker abandoning its brief to chase side questions it wasn't asked. Prompt an exit: "stop investigating, post your report now with what you verified, then you are done." Anything real it surfaced is yours to chase in fresh context, not its.
 - `/new` returns `agent_prompt_stalled` — slash commands complete instantly, so herdr sees no state change. Confirm with `agent read`.
 - `/new` resets pi's thinking level to the agent's start args.
+- **Close panes you no longer need** — once the worker's work is committed and reviewed, `pane close <pane-id>` (only panes you created; leave the human's and other orchestrators'). Lingering settled panes crowd the tab past the ~5-pane readability limit and read as live workers to the next orchestrator.
 
 ## Gotchas
 
@@ -131,7 +152,7 @@ Against a self-contained brief warm context buys nothing and costs drift — inc
 - **`--wait` timeout ≠ stuck.** Exits 1 with `{"error":{"code":"timeout"}}` but the worker is usually still working. Do not re-prompt — poll `agent get` until `agent_status` leaves `working`.
 - **`agent_pane_busy` right after `pane split`** means the shell hasn't spawned yet. Wait ~5–10s and retry once; still refusing is a dud pane — close it and split fresh. To relocate a live worker afterwards: `herdr pane move <pane-id> --tab <tab-id> --split right --target-pane <sibling>`. `pane move` never disturbs the agent but silently no-ops on a zoomed tab (`changed:false, reason:"zoomed_tab"`) — `pane zoom <pane-id> --off` first.
 - **`--source recent-unwrapped` can return empty for pi panes**; `visible` works.
-- **`Codex error: The usage limit has been reached`** doesn't look like a failure — the worker settles as `done` ~15s after briefing, having done nothing. A fast `done` on a big slice is the tell. Rebuild the pane with a different `--model` and tell the human their sub quota is out.
+- **`Codex error: The usage limit has been reached`** doesn't look like a failure — the worker settles as `done` ~15s after briefing, having done nothing. A fast `done` on a big slice is the tell. Rebuild the pane with a different `--model` and tell the human their sub quota is out. The general rule (any provider): `done` with no assistant text in the pane is not a completion — read before trusting a fast settle (arbe’s own pipeline accepts this shape too; arbe-28cf tracks fixing it).
 - **Past ~5 panes in a tab, `agent read` stops working** — panes go ~15 columns wide and reports wrap into confetti. Read the transcript from disk instead:
   ```sh
   # Claude Code: ~/.claude/projects/<slug>/<uuid>.jsonl

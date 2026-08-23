@@ -144,6 +144,8 @@ Lead with motivation. Write for a stranger reading the log, not the author who j
 Good: `Throw ArbeError from core/threads.`
 Good: `Stop logging 'undefined' in mutation logs. Closes arbe-e9d8.`
 
+**Committing something a user could notice? Add the `[Unreleased]` bullet in the same change** — in arbe that is `docs/changelog.md`, contract in AGENTS.md → Changelog. The bullet is user-facing prose, not a copy of the subject line.
+
 No AI/Claude/Anthropic/`Co-Authored-By` attribution in commits, PRs, or files.
 
 </important>
