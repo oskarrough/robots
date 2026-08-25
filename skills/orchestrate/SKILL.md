@@ -1,35 +1,50 @@
 ---
 name: arbe-orchestrate
-description: Triage a backlog, design doc, or feature area and prepare work so it's ready to hand to builder agents — surface issues one at a time, wire deps, recommend dispatch order. Use when the user says "orchestrate", "orchestrate only", "triage", or points you at an area to prep for dispatch. This decides *what* to hand off and in what order; to actually run the workers, see arbe-delegate.
+description: Triage a backlog, design doc, bug report, or feature area and prepare work so it's ready to hand to builder agents — surface issues one at a time, wire deps, recommend dispatch order. Use when the user says "orchestrate", "triage", reports something broken, or points you at an area to prep for dispatch. This decides *what* to hand off and in what order; to actually run the workers, see arbe-delegate.
 ---
 
 # Orchestrate
 
 ## What you produce
 
-A dispatch plan the human can approve in a few minutes. Decisions, not code and not a research report.
+A dispatch plan the human can approve in a few minutes. Decisions — not code, not a research report, and not a design.
 
-You are not building these tasks. You are making each one safe to hand over: right status, real scope, no duplicates, dependencies wired, a sane order. Once the human approves, `arbe-delegate` launches the builders.
+You are not building these tasks and you are not solving them. You are making each one safe to hand over: right status, real scope, no duplicates, dependencies wired, a sane order. Once the human approves, `arbe-delegate` launches the builders.
 
 Investigate freely to get there — `librarian` to locate scope, `oracle` to weigh a design call — rather than reading everything yourself. Keep the conclusion, not the files.
 
 ## How to say it
 
-Every turn should end with the human able to answer in one word.
+Every turn ends with a question the human can answer in one word, or with "yes" to the option you recommend.
 
-**Name every task as `short title (arbe-xxxx)`.** Derive the short title yourself — three or four words for what it actually is — even when the tracker's own title is a sentence. `arbe-8d6b` alone is unreadable; `self-host durable streams (arbe-8d6b)` needs no lookup. Do it in findings, questions, dependency maps, and dispatch order alike.
+**Open by naming the job.** First turn: what set you are triaging, how big it is, and what you will hand back. One or two lines. The human should never have to ask "orchestrate what?"
 
-**A question must stand alone.** No "as recommended above", no "still pending from before". The reader should never scroll to answer. Name the task, name the choice, and keep the options to one word each: close / rewrite / split / defer / merge.
+**Name every task as `short title (arbe-xxxx)`.** Derive the short title yourself — three or four words for what it actually is — even when the tracker's own title is a sentence. `arbe-8d6b` alone is unreadable; `self-host durable streams (arbe-8d6b)` needs no lookup. Do it in findings, questions, dependency maps, and dispatch order alike, and for any id you cite as evidence.
+
+**A question must stand alone.** No "as recommended above", no "still pending from before". The reader should never scroll to answer.
+
+**Recommend one option.** You did the reading — make the call and say which way you would go. Two options with no pick makes the human redo your thinking. Keep options short, but say the real choice: "narrow to shapes only, leave open" beats a one-word option that isn't what's actually on the table.
+
+**Say what is left.** An invisible queue is impossible to pace against.
 
 **Lead with the decision, not the derivation.** One line for what is wrong, one line for what to do. Commit ids, timestamps, and file paths are proof you hold in reserve — offer them if the human pushes back, never open with them. A finding that needs a table is a finding you have not finished thinking about. `arbe-bro` is the register.
 
-Put every question in one block at the very end of the turn.
+Put every question in one block at the very end of the turn:
+
+> **Questions** (2 open, 4 tasks left to triage)
+>
+> 1. **self-host durable streams (arbe-8d6b)** — the body mixes wire shapes with a rollout plan, so a builder would attempt both. Split it, or narrow it to shapes and leave rollout open? I'd split.
+> 2. **palette latency baseline (arbe-1f30)** — the work shipped Monday under the commit "Palette submit is one optimistic verb". Close it, or rewrite it around what's left? I'd close.
 
 ## Process
 
-If the entry point is unclear, ask whether to focus on a design doc, a set of tasks, a feature area, or the full backlog. If the user named one, begin there.
-
 Surface one finding with a concrete recommendation, then wait for the human's call. Walls of findings hide decisions.
+
+### When the human reports something
+
+"j/k scroll instead of moving the selection" is a task to file, not a problem to solve. Do not diagnose it, do not open the implementation, do not propose a fix. Search the backlog for a task that already covers it; if none does, draft one and show it.
+
+**A task body is framing and goal, never solution.** What is wrong, what right looks like, and roughly where it lives. Two or three lines is usually the whole task. How to do it is the builder's job — and a design you guessed at without reading the code narrows a capable agent down to your guess.
 
 ### 0. Establish project context
 
@@ -43,10 +58,13 @@ Read recent history for the area and match it against the set — a day of commi
 
 Choose the entry path:
 
+- For a report of something broken or wanted, see above — file it, don't solve it.
 - For a feature area, map the code and existing tasks. Ask what is half-built, what is wrong, and what is in scope before proposing tasks.
 - For a design doc, compare the doc with the code and existing tasks. Surface whether it is fully, partly, or not yet decomposed, or obsolete. With approval, make each task actionable without rereading the doc. Preserve any deferred remainder in the tracker or handoff.
 - For supplied tasks or a filter, pull the set and check whether each description is actionable.
 - For a full backlog, pull everything open and group a long list by theme. If no backlog location is established, ask where it lives.
+
+If the entry point is genuinely unclear, ask which of these it is. If the user named one, begin there.
 
 Decompose or record tasks only after approval.
 
@@ -60,7 +78,7 @@ Work through these in priority order, one at a time:
 
 - work that must deploy atomically; merge it or use a blocked dependency and deploy note
 - duplicate or overlapping tasks
-- descriptions too vague for an agent
+- descriptions too vague to know when they're done
 - tasks that will conflict in the same files
 - tracking or epic tasks cluttering the ready queue
 - work implied by a design doc but not tracked
@@ -72,7 +90,7 @@ For each, state the issue, recommend an action, and ask before changing the task
 
 Confirm each task has:
 
-- enough context for an agent to act without questions
+- enough context for an agent to act without questions — what is wrong, what done looks like, where it lives. Not how to do it
 - a status that matches the repo, not just the tracker (step 0)
 - dependencies recorded in the tracker or made explicit in the plan
 - no file conflicts with tasks in the same batch
