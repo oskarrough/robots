@@ -40,6 +40,7 @@ SKILLS
 - [arbe-discover-primitives](skills/discover-primitives/SKILL.md) — read a repo as an SDK/MCP surface
 - [arbe-diagram-first](skills/diagram-first/SKILL.md) — draw ASCII pipeline diagram before design prose or code
 - [arbe-review](skills/review/SKILL.md) — diff review and sweep review
+- [arbe-benchmark-agent-guidance](skills/benchmark-agent-guidance/SKILL.md) — controlled A/B benchmarks for agent guidance, harnesses, models, and reasoning levels
 - [arbe-mull](skills/mull/SKILL.md) — six-stage design session with review gates
 - [arbe-pipeline-audit](skills/pipeline-audit/SKILL.md) — walk README pipeline diagrams against code
 - [arbe-documentation](skills/documentation/SKILL.md) — Diátaxis four-mode docs
