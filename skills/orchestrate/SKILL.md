@@ -70,9 +70,9 @@ Use the project's own tracker when local instructions, docs, config, or the user
 
 When a tracker exists, pull its existing tasks for the area first so the triage does not duplicate them.
 
-**A task's status is a claim, not a fact. Check it against the repo before you triage on it.** Work lands in commits that never name the task, so `in_progress` can mean nobody is on it and `open` can mean half of it already shipped to production. Two p1 tasks in one session were stale by a working day this way, and a builder dispatched on either would have redone finished work.
+**A task's status is a claim, not a fact.** Commits rarely name the task, so `in_progress` can mean nobody is on it and `open` can mean it shipped last week. Check the set against the repo before triaging on it — and delegate the check.
 
-Read recent history for the area and match it against the set — a day of commit subjects, not a keyword grep. Searching commit messages for the task id or the task's own words finds nothing: real subjects say what changed, so the commits that finished "palette latency baseline" read "Palette submit is one optimistic verb" and "Thread create sheds serial round trips". A closed task's `close_reason` is often where the evidence actually lives.
+Grepping commit messages for the task id or its words finds nothing: real subjects say what changed, so the commit that finished "palette latency baseline" reads "Palette submit is one optimistic verb". Brief the scout for a day of commit subjects across the area, plus `close_reason` on anything already closed.
 
 Choose the entry path:
 
