@@ -85,19 +85,27 @@ Failure modes worth a line in the brief when they apply:
 - **Workers write like patent lawyers**, and reports get relayed to the human. Ask for plain language — short sentences, no jargon where a plain word exists. `/arbe-bro` is the register.
 - **A test can synthesize its own input and prove nothing.** When a fix keys on a field from another service, require a `file:line` citation of the *producing* code. A worker once fixed a handler against `payload.error` where the producer emits `payload.kind`, wrote a test inventing that shape, and shipped green.
 - **A brief that names a skill only YOUR harness has blocks the worker.** Claude Code skills (supabase plugin, /arbe-* commands) don't exist inside pi/cursor workers — a brief saying "load the X skill" stalls them at a fake blocker. Point at the skill's SKILL.md path on disk (find it under ~/.claude/plugins/cache or packages/skills/) or inline the rules, and name local code precedent to mirror.
+- **A "scan the codebase for X" brief needs a measurement, not an adjective.** Measure first yourself, then hand the worker the numbers. For "find over-long comments" a 40-line scanner found 1008 blocks of 6+ lines across 10,079 comment lines; the worker got that ranked list, a cap (review the top 60, propose at most 20), report-only-no-edits, the exclusions (generated files), and the keep-criteria (why-comments and contracts stay). It came back with 14 precise proposals carrying per-item "keep this much" text. Ungrounded, the same brief rewrites hundreds of files.
 - **Workers guess at ownership and vocabulary** unless told. Who owns gated actions ("write the migration, do NOT push"), and the exact enums they'll write ("close with `closed`; `in_review` does not exist").
 - **jj**: point at `arbe-jj-jujutsu` and make it binding. Delegation-specific: commit only your own files, don't reshape history, report it instead if history looks like it needs repair.
 - **Repo-wide checks go red under a worker's feet on a busy copy** — another worker's *uncommitted* mid-flight edits fail `bun run check`/`test` in files the first never touched, and it settles as blocked with finished work uncommitted. When two workers share the copy, put it in both briefs: red in files outside your fileset is expected — confirm none of the errors are in files YOU touched, verify with scoped checks, commit your own files, and note that repo-green re-verification happens after the tree settles.
 - **A blocker sends workers routing around it** — dead key, dead dev server, missing auth. Ask for one line of `blocked` and a stop. Same for your own fences: a scope rule that blocks the right fix should be reported, not detoured around.
 - **pi subagents route independently of their parent** and die on OpenRouter 402s or expired Anthropic OAuth, surfacing as a fake blocker. For code reading or editing, tell the worker to use its own model and not fan out.
 
+**Some files every worker must touch — own those yourself.** A repo convention like "a changelog bullet in the same change" turns one file into N writers and a guaranteed conflict; a tracker with a known concurrent-write bug loses updates the same way. Don't split them, take them: the brief says "do not add a changelog entry, do not run task update/close — I do both as your work lands." Costs the orchestrator a minute per landing and removes a whole class of collision.
+
 **A worker has no channel but its own pane**, and one that doesn't know this goes hunting for a thread or CLI to ask its question. Worth stating verbatim:
 
 > To ask the orchestrator anything or report a blocker: stop, print one final line starting with `ORCHESTRATOR: <question or blocker>`, and end your turn. Your settled pane IS the message — it is read promptly. Do not look for another channel; do not work around the question.
 
+**Every worker owes a closing report — say so, because silence is indistinguishable from success.** A worker that ends its turn with a tool call and no text looks exactly like one that finished, and a worker that never started looks like both. State the contract in the brief:
+
+> Your last turn must be a written report of what you did. Not a tool call, not silence. If you did nothing, say you did nothing and why. An empty final turn means the work is not done, and I will treat it as a failure rather than a result.
+
+
 ## 3. Watch and steer
 
-`herdr agent list` when you regain control; a settled pane is a finished report waiting to be read.
+`herdr agent list` when you regain control. A settled pane is a *claim* of a finished report — not the report. Verify it before you act on it (see **A settle is not a result** below).
 
 Watching one worker: don't poll — `agent prompt --wait` (or `agent wait`) blocks until the first settled idle/done/blocked state, per `herdr --skill`. Watching several at once: no native multi-agent wait exists (`agent wait` is single-target, `notification` is display-only), so poll `agent list`. The current best-known loop shape — improve it and update this if you find better:
 
@@ -115,6 +123,27 @@ while true; do
 done
 ```
 
+**A settle is not a result — check the pane produced something before you believe it.** This is the failure that costs most, because it is silent: the worker settles, the loop reports success, and the orchestrator moves on. Read the pane and classify before acting. Three empty shapes look identical in `agent list`, and each needs a different response:
+
+| what you see | what happened | what to do |
+|---|---|---|
+| statusline `0.0%/272k` | the prompt never landed | re-send it; nothing ran |
+| context burned, no assistant text, no diff/commit | ran and produced nothing | retry or escalate — never accept |
+| context burned, no text, but a real diff | did the work, skipped the report | ask for the report; do not redo the work |
+| assistant text present | a real report | review it |
+
+The predicate is *visible assistant text* — the same one arbe uses on its own bot turns (`assistantText`), where thinking-only counts as empty. Do not use tokens or elapsed time: a run can bill tokens and produce nothing.
+
+Corroborate against the repo, not just the pane. `jj st` and `jj log` are the second opinion — a worker claiming a commit that is not there, or reporting nothing while the tree changed, is the same defect seen from the other side. A settle with no text AND no tree change is a failure whatever the worker's status says.
+
+**A worker that never started looks exactly like one that finished.** Both are `idle` with no spinner in the pane, so a settle check built only on those two signals reports ALL SETTLED seconds after dispatch — with nothing done. Observed: two freshly-started pi agents were prompted, `agent prompt` returned success for both, and neither ever received the text. Add a liveness signal before you trust any settle: the pane statusline's context percentage. `0.0%/272k` means the prompt never landed, whatever `agent_status` says. Grep it out of `pane read --source visible` right after prompting and confirm it moved off zero before you start watching.
+
+**`agent start` returning `interactive_ready: true` does not mean pi can accept a prompt.** It is still loading its provider and model docs, and a prompt sent into that window is swallowed with no error. Sleep ~15s after start, read the pane, and only then prompt — then verify as above.
+
+**`agent_status` alone cannot tell you a pi worker settled.** Two separate false settles, both observed in one session: `agent prompt --wait` returned `done` *immediately* after submission, before the agent had started — it matched a state sampled at submit time, not a real settle. And a two-poll/10s debounce on `agent list` also reported settled while the pane still showed `⠦ Working...`; pi flaps idle in the gaps between tool calls, and 10–15s intervals sit inside that window. The skill's cursor warning applies to pi too.
+
+What actually holds: treat `agent_status` as a hint and confirm it against the pane's own text. A settle needs status in {idle, done} **and** `herdr pane read <pane> --source visible` showing no spinner — grep for `Working\.\.\.|esc to interrupt|⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` — twice in a row, 20s apart. Wrap it in a `settled()` shell function and the multi-agent loop above becomes reliable.
+
 - **A settled Claude Code pane's composer may hold ghost text nobody typed** — a suggested next message in the human's voice, following naturally from the worker's last output, reading exactly like an answer to the question you were about to ask. `send-keys <name> esc` clears it; the only real answer comes from your own conversation with the human.
 - **Deep-in-the-weeds workers respond to a checkpoint.** esc, then ask them to pause without resuming and restate in ~15 lines: goal in one sentence, design as bullets, files touched, anything added that isn't strictly needed. Costs a turn, catches drift and gold-plating before code lands, surfaces design questions they were sitting on. Follow with an explicit go.
 - **"Can it be simpler — reread your diff and cut anything not needed for the goal"** reliably shrinks diffs. Cheap to send before the commit.
@@ -128,6 +157,9 @@ This is what makes a cheap implementer safe, so it's the half not to skip: a str
 - **"Checks pass" is not evidence** — ask for the pasted output. Workers report from memory of an earlier run, or from a scoped check run before their last edits. On a shared working copy one red commit blocks everyone, and whoever broke it is usually idle by the time it's noticed. The shape that causes it: a change adding a variant to a union that updates the producer but not every consumer. Name the consumers in the brief when you can see them.
 - **A regex over source is evidence of nothing.** A hand-rolled "unused import" scan once deleted a live import used at 11 spread sites (`.makeSignalBase(...)` — the leading dot defeated its lookbehind) and would have 502'd every request. Use the language's own tooling, or brief a worker to.
 - **A fix's own test suite can encode the bug as intended behavior**, so re-running tests can't catch it. Verify fixes with a fresh pane and a stronger model, against the original review's attack scenarios.
+- **The worker tests the reproduction; you test the fix's *mechanism*.** A worker closed a bug where a flag-looking title swallowed the rest of the command, and proved it by replaying the original command. The fix shielded such tokens behind generated placeholders — and restored them only in the positionals array, so the same token passed as an *option value* handed the caller a literal `arbe-shielded-positional-0`. Green tests, correct repro, new bug. Ask "what else flows through the thing they changed?" and probe that path specifically. A ten-line script importing the changed function directly beats reading the diff twice — use an absolute import path, a relative one from a scratchpad won't resolve.
+- **Reproduce a reported blocker outside the worker's change before you believe it.** A worker concluded a whole feature was broken because its proof hit `500 server.internal ... failed (404): not found`. Running a plain unrelated command against the same service failed identically — so it wasn't the work — and `fly status` showed the service's machine had cold-started a minute after the failure. Retried, it worked. The worker could not have known: it only ever exercised its own code path. Then make it compound — file the task for the bad diagnostic, not just the unblock.
+- **A blocked worker is usually 30 seconds of your time, not theirs.** Of six workers, two stopped on blockers — correct behaviour, and worth a line in every brief. Neither could resolve its own: one asked to widen its fileset, and the answer was in `jj st` (the contended file had just been committed by another agent); the other's blocker was infrastructure. Check the *current* tree state when unblocking, not the state you briefed against.
 - **Your context is for taste, not code-reading.** Reading modules to prep a brief, tracing a flow, line-verifying a diff — all delegable. Keep the conclusion, not the files.
 - **A concurrent commit can absorb your worker's edits or change a contract under them.** jj commits snapshot the working-copy state of the named files, so another pane committing a file your worker edited takes those edits with it — the worker then reports "no remaining diff" on its own commit, which is not failure. And a mid-flight commit can change an API your worker's diff keys on (a helper gaining a parameter broke a just-written correlation). After any fix round on a busy working copy: `jj log` for commits that landed during it, verify with `jj show --stat` where your edits actually live, and point the re-review at interactions with those commits explicitly.
 - **A cheap scout's conclusions can be right while its file:line citations are invented.** Spot-check the two or three load-bearing paths yourself before pasting them into an implementation brief — a brief anchored on hallucinated paths sends the implementer hunting.
@@ -146,17 +178,22 @@ Against a self-contained brief warm context buys nothing and costs drift — inc
 - **Drift looks like** the worker abandoning its brief to chase side questions it wasn't asked. Prompt an exit: "stop investigating, post your report now with what you verified, then you are done." Anything real it surfaced is yours to chase in fresh context, not its.
 - `/new` returns `agent_prompt_stalled` — slash commands complete instantly, so herdr sees no state change. Confirm with `agent read`.
 - `/new` resets pi's thinking level to the agent's start args.
+- **Give one orchestration its own tab.** Workers scattered across the human's tabs are unfindable, by you and by them. `pane move <pane> --new-tab --label "<name>"` for the first worker, `pane move <pane2> --tab <tab-id> --split down` for the rest, then `tab rename <tab-id> "<n> <name>"` to match whatever numbering the session already uses.
 - **Close panes you no longer need** — once the worker's work is committed and reviewed, `pane close <pane-id>` (only panes you created; leave the human's and other orchestrators'). Lingering settled panes crowd the tab past the ~5-pane readability limit and read as live workers to the next orchestrator.
 
 ## Gotchas
 
+- **`herdr pane create` does not exist.** It is `pane split <pane> --direction right|down`.
+- **`agent prompt` takes TEXT as a positional, before any flags**: `agent prompt <name> "<text>" --wait`. Flags first fails with `unknown option: <your whole prompt>`, which reads like a quoting bug and isn't.
+- **herdr result envelopes are not uniform.** `pane split` returns `.result.pane`; `pane move` does not, so parsing for it throws on a move that in fact succeeded. Verify with `pane list` rather than trusting a field name across commands.
 - **Always target `pane split` with `--current`** (or an explicit `$HERDR_PANE_ID`). With no target herdr splits the UI-focused pane, which may belong to the human or another client.
 - **Address agents ONLY by registered name, never a pane id.** Retrying a failed `agent prompt` with a pane id once delivered the text to the orchestrator's OWN session *and* other workers' panes. If the target isn't in `agent list`, you can't reach it — relay through the human.
+- **`--provider openai` and `--provider openai-codex` are different bills.** `openai-codex` is the OAuth/subscription path; plain `openai` goes per-token against an API key. The pane tells you which you got: the statusline reads `(openai-codex)` and carries a `$x.xxx (sub)` marker, versus `(openai)` with no `(sub)`. Check it after every `agent start` — the flag is one word away from silently spending real money, and `agent start` reports success either way.
 - **Always pass a distinct `<name>` to `agent start`.** Several panes named `claude` make every agent-addressed command ambiguous, and the pane-addressed fallback is unreliable — `pane send-keys <pane> enter` returns `ok` and sometimes doesn't submit. Reused names also collapse in the sidebar, so neither you nor the human can tell which worker is which. Check `agent list` before reusing a name you've used this session.
 - **`--wait` timeout ≠ stuck.** Exits 1 with `{"error":{"code":"timeout"}}` but the worker is usually still working. Do not re-prompt — poll `agent get` until `agent_status` leaves `working`.
 - **`agent_pane_busy` right after `pane split`** means the shell hasn't spawned yet. Wait ~5–10s and retry once; still refusing is a dud pane — close it and split fresh. To relocate a live worker afterwards: `herdr pane move <pane-id> --tab <tab-id> --split right --target-pane <sibling>`. `pane move` never disturbs the agent but silently no-ops on a zoomed tab (`changed:false, reason:"zoomed_tab"`) — `pane zoom <pane-id> --off` first.
 - **`--source recent-unwrapped` can return empty for pi panes**; `visible` works.
-- **`Codex error: The usage limit has been reached`** doesn't look like a failure — the worker settles as `done` ~15s after briefing, having done nothing. A fast `done` on a big slice is the tell. Rebuild the pane with a different `--model` and tell the human their sub quota is out. The general rule (any provider): `done` with no assistant text in the pane is not a completion — read before trusting a fast settle (arbe’s own pipeline accepts this shape too; arbe-28cf tracks fixing it).
+- **`Codex error: The usage limit has been reached`** doesn't look like a failure — the worker settles as `done` ~15s after briefing, having done nothing. A fast `done` on a big slice is the tell. Rebuild the pane with a different `--model` and tell the human their sub quota is out. The general rule (any provider): `done` with no assistant text in the pane is not a completion — read before trusting a fast settle — see **A settle is not a result** in §3 for the full classification.
 - **Past ~5 panes in a tab, `agent read` stops working** — panes go ~15 columns wide and reports wrap into confetti. Read the transcript from disk instead:
   ```sh
   # Claude Code: ~/.claude/projects/<slug>/<uuid>.jsonl
