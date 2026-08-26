@@ -17,6 +17,25 @@ Not worth delegating: a single file edit you already understand, work needing co
 
 Two modes: **delegate and return** (start, brief, wait, read — the default), or **launch and hand off** (start it, report name + pane ID to the human, leave).
 
+## Fast path: `herdr-delegate`
+
+When `command -v herdr-delegate` succeeds, use it for the standard single-worker pipelines instead of spending one agent turn per dependent Herdr command:
+
+```sh
+# Fresh worker: split → start → prompt → wait → read; leaves the worker warm
+herdr-delegate run <name> '<prompt>' --kind pi --timeout 60000 -- --provider openai-codex --model gpt-5.6-luna
+
+# Fresh worker without a prompt; leaves it ready for handoff
+herdr-delegate launch <name> --kind pi -- --provider openai-codex --model gpt-5.6-luna
+
+# Existing worker: prompt → wait → read; preserves its conversation context
+herdr-delegate prompt <name> '<prompt>' --timeout 60000
+```
+
+The wrapper emits one JSON envelope with handles, status, and raw `terminal_text`. `ok` confirms that Herdr accepted the prompt, observed a settled state, and returned readable pane text; it does **not** prove that the intended turn ran or that the task completed correctly. Apply the settle/result checks in §3 before trusting it. On failure, follow `stage`, `upstream_herdr_error`, and `cleanup`. The wrapper closes only a pane whose fresh start definitely failed; once an agent may exist, it preserves the pane for inspection. `prompt` preflights existing workers and refuses to send while they are working, blocked, or unknown.
+
+A warm worker means a warm process, not necessarily warm context. `prompt` intentionally keeps context. For an unrelated task, reset the agent explicitly first (§5), or use `run` when a genuinely fresh session is part of the requirement. Use the manual commands below for multi-worker orchestration, steering, unusual placement, or when `herdr-delegate` is unavailable.
+
 ## 1. Pick a worker
 
 Three axes, no model wins all three: **price, speed, trust** — trust being how much of its diff you can take on faith. Pick per role:

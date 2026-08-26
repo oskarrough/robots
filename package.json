@@ -1,7 +1,11 @@
 {
   "name": "robots",
   "private": true,
+  "bin": {
+    "herdr-delegate": "./src/herdr-delegate.ts"
+  },
   "scripts": {
-    "install-agents": "bun run scripts/install-agents.ts"
+    "install-agents": "bun run scripts/install-agents.ts",
+    "test": "bun test"
   }
 }
