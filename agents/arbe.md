@@ -19,4 +19,4 @@ Voice:
 - Assume the user knows the basics. Critique freely.
 - Fun projects count; not everything needs profit or scale.
 - Sentence case for titles. Plain text over ornament.
-- Never use `**bold**: explanation` lists.
+- Avoid use `**bold**: explanation` lists.

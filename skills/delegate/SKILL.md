@@ -32,7 +32,7 @@ Kind first, model second — the kind picks which account pays.
 | account | reach it with | what it's for |
 | --- | --- | --- |
 | Anthropic sub | `--kind claude` | Anthropic models. Log-tracing, timing analysis, the review gate. |
-| Codex sub | `--kind pi --provider openai-codex` | sol. Never the `openai/...` id — that routes via OpenRouter and pays per token for a model the sub covers. |
+| Codex sub | `--kind pi --provider openai-codex` | sol and luna. Never the `openai/...` id — that routes via OpenRouter and pays per token for a model the sub covers. |
 | Cursor sub | `--kind cursor` | grok. Effort baked into the id (`-low`/`-high`/`-xhigh`), not a `:suffix`. **Never a `-fast` variant** — costs far too much for the latency. `cursor-agent models` lists everything. |
 | OpenCode Zen (beta) | `opencode2` | Ox Alpha Free. Free while the preview lasts. |
 | OpenRouter credits | `--kind pi` (default provider) | everything else, deepseek included. Paid per token. |
@@ -43,6 +43,7 @@ Kind first, model second — the kind picks which account pays.
 | `deepseek/deepseek-v4-flash-0731:high` | very cheap | fast | low-medium | implementer for tight mechanical briefs — renames, ports, test runs. Never unreviewed (Oskar, 2026-08-23): always gate its diff, and direct it — pin the design, demand a plan checkpoint before edits, steer mid-flight. |
 | `deepseek/deepseek-v4-pro-0813:high` | cheap | medium | medium-high | implementer for briefs flash failed twice. |
 | `cursor-grok-4.6-high` (`--kind cursor`) | sub | fast | medium-high | implementer. |
+| `gpt-5.6-luna` (Codex sub) | sub | fast | uncalibrated | tiny prompts and delegation smoke tests; do not infer implementation trust from that. |
 | `gpt-5.6-sol:medium` (Codex sub) | sub | medium | high | workhorse implementer — right for anything spanning layers. |
 | `gpt-5.6-sol:high` | sub | slow | highest | hardest work only: cross-layer, subtle concurrency. |
 | Opus 5 (`--kind claude -- --model opus --effort <level>`) | sub | medium | highest | the reviewer, and the escalation target. `--effort xhigh` for hard implementation. |
@@ -69,6 +70,23 @@ Model notes:
 - Flash spirals instead of asking when a brief secretly requires a design pass (state machines, commit flow). Re-slice to one module, or send it up the ladder.
 - An invalid `model:level` string does not error — pi warns `Model ... not found for provider` and falls through with thinking off. Check the statusline after start.
 
+## Run a crew, not a dispatch
+
+Default to a standing tab of ~4 warm workers you feed small tasks, rather than spawning a fresh pane per job. Spawning costs a real minute — split, start, wait out the load, verify liveness — and that cost is what tempts you into one huge brief with proof gates, because you may never talk to that worker again. A warm crew makes dispatch nearly free, which flips the economics: small asks, steered often, with you holding the quality bar continuously instead of trying to encode it in the brief up front.
+
+`/new` between tasks is cheaper than a new pane and keeps name, model, and account stable. Queue the next slice onto whoever is idle — `agent list` is the work queue.
+
+Reuse an idle worker when its kind, model, account, cwd, and role still fit the next ask. Reusing the process avoids pane and model startup; it does **not** mean blindly carrying the conversation forward. Keep context for a continuation or follow-up where the history helps. Run `/new` first for an unrelated self-contained task, when prior assumptions could bias the answer, or when context is already substantial. A warm worker means a warm process, not necessarily warm context. Start a fresh agent only when the requested kind/model differs, independent session state matters, the worker is near its context ceiling, or the existing worker has drifted.
+
+Two things get harder in crew mode, so spend the savings there:
+
+- **Fencing.** Four always-on workers in one repo collide constantly. Observed in one session: two workers interleaved in `packages/core/volume-index.ts`, and two others about to write contradictory docs about a tool one of them was deleting. Every dispatch names its fileset AND the off-limits files, every time. This is not optional overhead in crew mode, it is the thing that makes it work.
+- **Knowing who is idle for the wrong reason.** A crew hides failures: a worker that never got its prompt looks exactly like one waiting for work. Keep the settle classification from §3 honest.
+
+Slice by what actually parallelizes. Additive work fans out beautifully — separate features, docs, a new route, a UI affordance — because the files are disjoint. **Deletion sweeps do not**: pulling a tool cascades type errors into its callers, and ten agents each deleting one thing produce ten red trees with no way to tell whose is whose. Give a cascading removal to one owner and fan out everything around it.
+
+Past ~5 panes in a tab the panes go too narrow to read; see the transcript-from-disk recipe in Gotchas.
+
 ## 2. Brief
 
 Size an ask so its result can be reviewed and shipped in one sitting, and a drifted worker loses one increment rather than a day. Too big when: the brief needs many unrelated scope bullets, it spans surfaces that deploy separately, or you can't name what you'd deploy when it lands. Split before briefing, not after the worker drowns.
@@ -78,6 +96,8 @@ Long or reusable briefs go in a file (`brief-<task>.md`, prompt with the path pl
 Substance belongs in the tracked task (what/why/done-when/evidence), so any agent can pick it up cold. The brief carries this run's mechanics: fileset, report shape, whichever rules below apply.
 
 **The working copy is shared.** Two workers in the same files will fight, and you won't notice until a commit lands with someone else's half-finished edit. `jj status` and `jj diff -r @- --stat` show you who's where. A worker can't see other panes, so name the off-limits files in the brief: "do not edit X, Y, Z — another worker owns them; if your change genuinely requires one, stop and ask." Near-misses count — a worker owning a shared layout collides with any later "add a banner" — and the human edits in panes too.
+
+**Fence by dependency direction, not by directory.** Naming the off-limits *app* is not enough: a worker whose task lives in one app routinely reaches down into the shared core to thread a parameter through, and lands in a file your worker also needs. Observed: a conductor-side PDF task and a migration task both edited `packages/core/volume-index.ts` — one line versus a parameter thread, no semantic conflict, but neither worker could commit or deploy without carrying the other's WIP. Before briefing, ask what the *other* live workers' tasks depend on, not just where they live, and fence the shared layer explicitly. When it happens anyway, the unblock is usually a split, not a wait: separate the proof into the half that needs a deploy and the half that doesn't, and keep the worker on the second half while the contended file settles.
 
 Failure modes worth a line in the brief when they apply:
 
@@ -140,7 +160,7 @@ Corroborate against the repo, not just the pane. `jj st` and `jj log` are the se
 
 **A worker that never started looks exactly like one that finished.** Both are `idle` with no spinner in the pane, so a settle check built only on those two signals reports ALL SETTLED seconds after dispatch — with nothing done. Observed: two freshly-started pi agents were prompted, `agent prompt` returned success for both, and neither ever received the text. Add a liveness signal before you trust any settle: the pane statusline's context percentage. `0.0%/272k` means the prompt never landed, whatever `agent_status` says. Grep it out of `pane read --source visible` right after prompting and confirm it moved off zero before you start watching.
 
-**`agent start` returning `interactive_ready: true` does not mean pi can accept a prompt.** It is still loading its provider and model docs, and a prompt sent into that window is swallowed with no error. Sleep ~15s after start, read the pane, and only then prompt — then verify as above.
+**Do not add a fixed sleep after a successful `agent start`.** Current Herdr waits for interactive readiness; its installed CLI says success means the agent is ready for input. Prompt immediately, then verify the result as above. If an older/broken integration swallows the prompt (zero context use and no user prompt visible), resend once and record the regression rather than taxing every healthy start with a 15-second delay.
 
 **`agent_status` alone cannot tell you a pi worker settled.** Two separate false settles, both observed in one session: `agent prompt --wait` returned `done` *immediately* after submission, before the agent had started — it matched a state sampled at submit time, not a real settle. And a two-poll/10s debounce on `agent list` also reported settled while the pane still showed `⠦ Working...`; pi flaps idle in the gaps between tool calls, and 10–15s intervals sit inside that window. The skill's cursor warning applies to pi too.
 
@@ -169,13 +189,19 @@ This is what makes a cheap implementer safe, so it's the half not to skip: a str
 
 ## 5. Reset between tasks
 
-A long-lived worker accumulates context and starts re-litigating old decisions and rabbit-holing.
+A long-lived worker accumulates context and starts re-litigating old decisions and rabbit-holing. Reset the conversation without paying pane/model startup again:
 
 ```sh
 herdr agent prompt <name> "/new" --wait --timeout 15000
 ```
 
-Against a self-contained brief warm context buys nothing and costs drift — including attachment to a design you just told it to abandon, which is why a REDESIGN verdict is worth a reset. Warm is right when the next task continues the same material, like reviewing fixes on its own diff.
+Context policy:
+
+- **Same task or direct follow-up:** keep context; it contains useful decisions and evidence.
+- **Unrelated self-contained task:** reuse the worker but `/new` first.
+- **Prior design was rejected or the worker drifted:** `/new`; do not let it defend stale work.
+- **Independent benchmark/review or session-state test:** start a genuinely fresh agent when isolation is part of the proof.
+- **Nearly empty context:** skipping `/new` is reasonable only when the small history is relevant or clearly cannot bias the next answer.
 
 - **Context ceiling:** pi workers get noticeably worse past ~200–250k tokens (statusline `X%/272k`). Near it, `/new` plus a fresh brief beats steering the warm session — a round-2 prompt inherits the degradation.
 - **Drift looks like** the worker abandoning its brief to chase side questions it wasn't asked. Prompt an exit: "stop investigating, post your report now with what you verified, then you are done." Anything real it surfaced is yours to chase in fresh context, not its.
@@ -194,7 +220,8 @@ Against a self-contained brief warm context buys nothing and costs drift — inc
 - **`--provider openai` and `--provider openai-codex` are different bills.** `openai-codex` is the OAuth/subscription path; plain `openai` goes per-token against an API key. The pane tells you which you got: the statusline reads `(openai-codex)` and carries a `$x.xxx (sub)` marker, versus `(openai)` with no `(sub)`. Check it after every `agent start` — the flag is one word away from silently spending real money, and `agent start` reports success either way.
 - **Always pass a distinct `<name>` to `agent start`.** Several panes named `claude` make every agent-addressed command ambiguous, and the pane-addressed fallback is unreliable — `pane send-keys <pane> enter` returns `ok` and sometimes doesn't submit. Reused names also collapse in the sidebar, so neither you nor the human can tell which worker is which. Check `agent list` before reusing a name you've used this session.
 - **`--wait` timeout ≠ stuck.** Exits 1 with `{"error":{"code":"timeout"}}` but the worker is usually still working. Do not re-prompt — poll `agent get` until `agent_status` leaves `working`.
-- **`agent_pane_busy` right after `pane split`** means the shell hasn't spawned yet. Wait ~5–10s and retry once; still refusing is a dud pane — close it and split fresh. To relocate a live worker afterwards: `herdr pane move <pane-id> --tab <tab-id> --split right --target-pane <sibling>`. `pane move` never disturbs the agent but silently no-ops on a zoomed tab (`changed:false, reason:"zoomed_tab"`) — `pane zoom <pane-id> --off` first.
+- **A pane in a tab created with `--no-focus` is permanently unstartable.** `herdr tab create --label X --no-focus` returns a `root_pane` that sits at a healthy fish prompt, reads fine with `pane read`, and reports `agent_status: "unknown"` — and `agent start` rejects it with `agent_pane_busy` forever, through nudges, enters, and 20s of retries. Same for anything split off it. Build workers where you already are (`pane split --current`), start them, then `pane move` each into the new tab and `pane close` the duds. Never brief into a tab-create pane.
+- **Try `agent start` immediately after `pane split`; do not preemptively sleep.** If it returns `agent_pane_busy`, the shell hasn't spawned yet: wait ~5–10s and retry once; still refusing is a dud pane — close it and split fresh. To relocate a live worker afterwards: `herdr pane move <pane-id> --tab <tab-id> --split right --target-pane <sibling>`. `pane move` never disturbs the agent but silently no-ops on a zoomed tab (`changed:false, reason:"zoomed_tab"`) — `pane zoom <pane-id> --off` first.
 - **`--source recent-unwrapped` can return empty for pi panes**; `visible` works.
 - **`Codex error: The usage limit has been reached`** doesn't look like a failure — the worker settles as `done` ~15s after briefing, having done nothing. A fast `done` on a big slice is the tell. Rebuild the pane with a different `--model` and tell the human their sub quota is out. The general rule (any provider): `done` with no assistant text in the pane is not a completion — read before trusting a fast settle — see **A settle is not a result** in §3 for the full classification.
 - **Past ~5 panes in a tab, `agent read` stops working** — panes go ~15 columns wide and reports wrap into confetti. Read the transcript from disk instead:
