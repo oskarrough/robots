@@ -5,43 +5,42 @@ Not so private public robot files.
 HERDR-DELEGATE
 ---------------
 
-`herdr-delegate` is a standalone Bun CLI for creating or reusing named agents
+`herdr-delegate` is one shortcut for handing a prompt to a fresh named agent
 inside a live Herdr session (`HERDR_ENV=1`). Install it from this checkout with
 `bun link`, then run:
 
-    herdr-delegate run NAME PROMPT --kind KIND [options] -- [native agent args...]
-    herdr-delegate launch NAME --kind KIND [options] -- [native agent args...]
-    herdr-delegate prompt NAME PROMPT [--timeout MS] [--lines N]
+    herdr-delegate NAME PROMPT --kind KIND [options] -- [native agent args...]
 
-The modes map directly to Herdr:
+It performs `agent list` → `pane split` → `agent start` → runtime verification
+→ optional `pane move` → `agent prompt --wait` → `agent read --format text`.
+Use Herdr itself to prompt existing agents, launch without a prompt, steer,
+move, read, or close workers.
 
-- `run`: `agent list` → `pane split` → `agent start` → optional `pane move` →
-  `agent prompt --wait` → `agent read --format text`.
-- `launch`: the same creation path, without prompt or read.
-- `prompt`: preflight an existing named agent with `agent get`, then prompt and
-  read it. It refuses non-idle workers and preserves context; resets remain
-  explicit and agent-specific.
-
-Fresh-agent options are `--kind` (required), `--direction right|down`, `--cwd`,
-`--place sibling|tab`, `--tab-label`, and `--start-timeout` (3001–300000 ms;
-default 30000). `run` and `prompt` accept `--timeout` (nonnegative ms; omitted
-means indefinite) and `--lines` (default 120, maximum 4294967295). Only fresh modes accept native
-arguments after `--`.
+Options are `--kind` (required), `--direction right|down`, `--cwd`, `--tab`,
+`--workspace`, `--start-timeout` (3001–300000 ms; default 30000), `--timeout`
+(nonnegative ms; omitted means indefinite), and `--lines` (default 120, maximum
+4294967295). `--tab` joins that existing tab. `--workspace` accepts an ID or a
+unique label and joins its active tab. They are mutually exclusive. Native
+agent arguments follow `--`.
 
 The wrapper writes exactly one JSON envelope to stdout and exits 0 for success
-or 1 for failure. Failures include `stage`, `created`, known agent/pane handles,
-the upstream Herdr error, cleanup status, and raw `terminal_text` when readable.
-`ok: true` confirms command transport, a reported settled state, and readable
-terminal output—not semantic task completion. `created: true` means a named
-agent was confirmed, not merely that a pane was
-allocated. Herdr's JSON errors arrive on its stderr; successful terminal reads
-are returned unchanged as text.
+or 1 for failure. It returns `ok`, `created`, final agent/pane/tab/workspace
+handles, runtime verification, prompt state, and raw `terminal_text`. Failures
+also return `stage`, the upstream Herdr error, and cleanup status.
+`created: true` means a named agent was confirmed, not merely that a pane was
+allocated.
+
+For Pi, `runtime.requested` reports provider, model, and reasoning level from
+native arguments. `runtime.resolved` reads Pi's session JSONL.
+`subscription_billed` is true for resolved `openai-codex`, false for `openai`,
+and null for an unmapped provider. A known mismatch exits 1 at
+`stage: "verify"`. Other agent kinds return null resolved values with
+`verified: false`.
 
 Once an agent is confirmed, the wrapper never closes its pane. Prompt timeouts,
-blocked agents, failed placement, and ambiguous starts are preserved for
-inspection. A failed start closes its new pane only after `agent get` confirms
-that the named agent does not own it; uncertain ownership is reported and left
-untouched. Tab placement also requires Herdr to report `changed: true`.
+blocked agents, failed placement, and ambiguous starts remain available for
+inspection. A failed start closes its pane only after `agent get` confirms that
+the named agent does not own it.
 
 AGENTS
 ---------------

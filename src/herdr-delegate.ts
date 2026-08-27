@@ -1,17 +1,14 @@
 #!/usr/bin/env bun
 
-export type HerdrDelegateMode = "run" | "launch" | "prompt";
 type JsonObject = Record<string, unknown>;
-type FreshMode = "run" | "launch";
-type Placement = "sibling" | "tab";
 type Direction = "right" | "down";
-type AgentHandles = { name: string; kind: string | null; pane_id: string | null; tab_id: string | null; status: string | null };
+type AgentHandles = { name: string; kind: string | null; pane_id: string | null; tab_id: string | null; workspace_id: string | null; status: string | null };
+type RuntimeValues = { provider: string | null; model: string | null; reasoning_level: string | null };
+type ResolvedRuntimeValues = RuntimeValues & { subscription_billed: boolean | null };
+type RuntimeState = { requested: RuntimeValues; resolved: ResolvedRuntimeValues; verified: boolean; matches_requested: boolean | null };
 type PromptState = { accepted: boolean | null; settled: string | null };
-type FreshOptions = { name: string; kind: string; direction: Direction; cwd: string; place: Placement; tabLabel: string; startTimeoutMs: number; nativeArgs: string[] };
-type DelegateCommand =
-  | ({ mode: "run"; prompt: string; timeoutMs?: number; lines: number } & FreshOptions)
-  | ({ mode: "launch" } & FreshOptions)
-  | { mode: "prompt"; name: string; prompt: string; timeoutMs?: number; lines: number };
+type FreshOptions = { name: string; kind: string; direction: Direction; cwd: string; tab: string | null; workspace: string | null; startTimeoutMs: number; nativeArgs: string[] };
+type DelegateCommand = FreshOptions & { prompt: string; timeoutMs?: number; lines: number };
 
 class HerdrDelegateError extends Error {
   constructor(readonly upstream: JsonObject) {
@@ -20,11 +17,13 @@ class HerdrDelegateError extends Error {
 }
 class HerdrDelegateUsageError extends Error {}
 
-const usage = "herdr-delegate run NAME PROMPT --kind KIND [options] -- [agent args...]\nherdr-delegate launch NAME --kind KIND [options] -- [agent args...]\nherdr-delegate prompt NAME PROMPT [--timeout MS] [--lines N]";
+const usage = "herdr-delegate NAME PROMPT --kind KIND [options] -- [agent args...]";
 const HERDR_AGENT_START_BUSY_BACKOFF_MS = [5_000] as const;
 const HERDR_DELEGATE_MAX_READ_LINES = 4_294_967_295;
 const noCleanup = (reason: string): JsonObject => ({ action: "none", reason });
-const emptyHandles = (name: string, kind: string | null = null): AgentHandles => ({ name, kind, pane_id: null, tab_id: null, status: null });
+const emptyHandles = (name: string, kind: string | null = null): AgentHandles => ({ name, kind, pane_id: null, tab_id: null, workspace_id: null, status: null });
+const emptyRuntimeValues = (): RuntimeValues => ({ provider: null, model: null, reasoning_level: null });
+const emptyResolvedRuntimeValues = (): ResolvedRuntimeValues => ({ ...emptyRuntimeValues(), subscription_billed: null });
 const isObject = (value: unknown): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
 const errorCode = (error: unknown): string | null => error instanceof HerdrDelegateError && typeof error.upstream.code === "string" ? error.upstream.code : null;
 const asDelegateError = (error: unknown): HerdrDelegateError => error instanceof HerdrDelegateError ? error : new HerdrDelegateError({ code: "herdr_delegate_internal_error", message: error instanceof Error ? error.message : String(error) });
@@ -44,45 +43,35 @@ function splitOption(argument: string, following: string | undefined): [string, 
   return [argument, following, 2];
 }
 
-/** Parses each mode's own options and leaves fresh-agent arguments after `--` untouched. */
+/** Parses delegate options and leaves native agent arguments after `--` untouched. */
 export function parseHerdrDelegateArguments(argv: string[], defaultCwd = process.cwd()): DelegateCommand {
-  const mode = argv[0] as HerdrDelegateMode | undefined;
-  if (mode !== "run" && mode !== "launch" && mode !== "prompt") throw new HerdrDelegateUsageError(`Unknown command: ${mode ?? "(missing)"}\n${usage}`);
-  const positionalCount = mode === "launch" ? 1 : 2;
-  const positionals = argv.slice(1, positionalCount + 1);
-  if (positionals.length !== positionalCount || positionals.some((value) => value === "")) throw new HerdrDelegateUsageError(`Missing ${mode} argument\n${usage}`);
-  const remainder = argv.slice(positionalCount + 1);
-  const separator = remainder.indexOf("--");
-  if (mode === "prompt" && separator >= 0) throw new HerdrDelegateUsageError("prompt does not accept native agent arguments");
+  const positionals = argv.slice(0, 2);
+  if (positionals.length !== 2 || positionals.some((value) => value === "")) throw new HerdrDelegateUsageError(`Missing NAME or PROMPT\n${usage}`);
+  const remainder = argv.slice(2), separator = remainder.indexOf("--");
   const options = separator < 0 ? remainder : remainder.slice(0, separator);
   const nativeArgs = separator < 0 ? [] : remainder.slice(separator + 1);
-  let kind: string | undefined, direction: Direction = "right", cwd = defaultCwd, place: Placement = "sibling", tabLabel: string | undefined;
+  let kind: string | undefined, direction: Direction = "right", cwd = defaultCwd, tab: string | null = null, workspace: string | null = null;
   let startTimeoutMs = 30_000, timeoutMs: number | undefined, lines = 120;
   for (let index = 0; index < options.length;) {
     const [flag, value, consumed] = splitOption(options[index]!, options[index + 1]);
     index += consumed;
-    const freshOnly = ["--kind", "--direction", "--cwd", "--place", "--tab-label", "--start-timeout"].includes(flag);
-    if (mode === "prompt" && freshOnly) throw new HerdrDelegateUsageError(`prompt does not accept ${flag}`);
     if (flag === "--kind") kind = value;
     else if (flag === "--direction" && (value === "right" || value === "down")) direction = value;
     else if (flag === "--cwd") cwd = value;
-    else if (flag === "--place" && (value === "sibling" || value === "tab")) place = value;
-    else if (flag === "--tab-label") tabLabel = value;
+    else if (flag === "--tab") tab = value;
+    else if (flag === "--workspace") workspace = value;
     else if (flag === "--start-timeout") {
       startTimeoutMs = parseSafeInteger(flag, value);
       if (startTimeoutMs < 3001 || startTimeoutMs > 300_000) throw new HerdrDelegateUsageError("--start-timeout must be between 3001 and 300000");
-    } else if (flag === "--timeout" && mode !== "launch") timeoutMs = parseSafeInteger(flag, value);
-    else if (flag === "--lines" && mode !== "launch") {
+    } else if (flag === "--timeout") timeoutMs = parseSafeInteger(flag, value);
+    else if (flag === "--lines") {
       lines = parseSafeInteger(flag, value);
       if (lines > HERDR_DELEGATE_MAX_READ_LINES) throw new HerdrDelegateUsageError(`--lines must be at most ${HERDR_DELEGATE_MAX_READ_LINES}`);
-    }
-    else throw new HerdrDelegateUsageError(`Invalid ${mode} option: ${flag}${flag === "--direction" || flag === "--place" ? `=${value}` : ""}`);
+    } else throw new HerdrDelegateUsageError(`Invalid option: ${flag}${flag === "--direction" ? `=${value}` : ""}`);
   }
-  const name = positionals[0]!;
-  if (mode === "prompt") return { mode, name, prompt: positionals[1]!, timeoutMs, lines };
-  if (!kind) throw new HerdrDelegateUsageError(`${mode} requires --kind KIND`);
-  const fresh = { name, kind, direction, cwd, place, tabLabel: tabLabel ?? name, startTimeoutMs, nativeArgs };
-  return mode === "run" ? { mode, ...fresh, prompt: positionals[1]!, timeoutMs, lines } : { mode, ...fresh };
+  if (!kind) throw new HerdrDelegateUsageError("--kind KIND is required");
+  if (tab !== null && workspace !== null) throw new HerdrDelegateUsageError("--tab and --workspace are mutually exclusive");
+  return { name: positionals[0]!, prompt: positionals[1]!, kind, direction, cwd, tab, workspace, startTimeoutMs, timeoutMs, lines, nativeArgs };
 }
 
 async function captureHerdr(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
@@ -135,18 +124,28 @@ function resultObject(envelope: JsonObject, command: string): JsonObject {
   if (!isObject(envelope.result)) throw invalidResponse(command);
   return envelope.result;
 }
-function decodePane(value: unknown, command: string): { pane_id: string; tab_id: string } {
+function decodePane(value: unknown, command: string): { pane_id: string; tab_id: string; workspace_id: string | null } {
   if (!isObject(value) || typeof value.pane_id !== "string" || typeof value.tab_id !== "string") throw invalidResponse(command);
-  return { pane_id: value.pane_id, tab_id: value.tab_id };
+  const workspaceId = typeof value.workspace_id === "string" ? value.workspace_id : value.pane_id.includes(":") ? value.pane_id.slice(0, value.pane_id.indexOf(":")) : null;
+  return { pane_id: value.pane_id, tab_id: value.tab_id, workspace_id: workspaceId };
+}
+function decodeAgentValue(envelope: JsonObject, command: string): JsonObject {
+  const agent = resultObject(envelope, command).agent;
+  if (!isObject(agent)) throw invalidResponse(command);
+  return agent;
 }
 function decodeAgent(envelope: JsonObject, name: string, fallbackKind: string | null, command: string): AgentHandles {
-  const agent = resultObject(envelope, command).agent;
+  const agent = decodeAgentValue(envelope, command);
   const pane = decodePane(agent, command);
-  if (!isObject(agent) || typeof agent.agent_status !== "string") throw invalidResponse(command);
+  if (typeof agent.agent_status !== "string") throw invalidResponse(command);
   if (agent.agent !== undefined && typeof agent.agent !== "string") throw invalidResponse(command);
   return { name, kind: typeof agent.agent === "string" ? agent.agent : fallbackKind, ...pane, status: agent.agent_status };
 }
-function decodeSplit(envelope: JsonObject): { pane_id: string; tab_id: string } {
+function decodePiSessionPath(envelope: JsonObject): string | null {
+  const session = decodeAgentValue(envelope, "agent get").agent_session;
+  return isObject(session) && session.kind === "path" && typeof session.value === "string" ? session.value : null;
+}
+function decodeSplit(envelope: JsonObject): { pane_id: string; tab_id: string; workspace_id: string | null } {
   return decodePane(resultObject(envelope, "pane split").pane, "pane split");
 }
 function decodeAgentNames(envelope: JsonObject): string[] {
@@ -163,8 +162,8 @@ function decodeMove(envelope: JsonObject, current: AgentHandles): { changed: boo
   return { changed: move.changed, reason: move.reason ?? null, handles: { name: current.name, kind, ...pane, status } };
 }
 
-function failure(mode: HerdrDelegateMode, created: boolean, stage: string, error: unknown, agent: AgentHandles, cleanup: JsonObject, extra: JsonObject = {}): JsonObject {
-  return { ok: false, mode, created, stage, agent, upstream_herdr_error: asDelegateError(error).upstream, ...extra, cleanup };
+function failure(created: boolean, stage: string, error: unknown, agent: AgentHandles, cleanup: JsonObject, extra: JsonObject = {}): JsonObject {
+  return { ok: false, created, stage, agent, upstream_herdr_error: asDelegateError(error).upstream, ...extra, cleanup };
 }
 async function closeCreatedPane(paneId: string): Promise<JsonObject> {
   try { await callHerdrJson(["pane", "close", paneId]); return { action: "pane_close", pane_id: paneId, outcome: "closed" }; }
@@ -182,7 +181,7 @@ async function inspectAgent(name: string, initial: AgentHandles, lines: number):
   return { ownership, handles, terminalText, ...(inspectionError ? { error: inspectionError } : {}) };
 }
 
-type FreshSetup = { handles: AgentHandles; paneId: string } | { output: JsonObject };
+type FreshSetup = { handles: AgentHandles; destinationTab: string | null } | { output: JsonObject };
 async function startFreshHerdrAgent(command: FreshOptions, paneId: string): Promise<AgentHandles> {
   const args = ["agent", "start", command.name, "--kind", command.kind, "--pane", paneId, "--timeout", String(command.startTimeoutMs), "--", ...command.nativeArgs];
   for (const backoffMs of [...HERDR_AGENT_START_BUSY_BACKOFF_MS, null]) {
@@ -195,43 +194,124 @@ async function startFreshHerdrAgent(command: FreshOptions, paneId: string): Prom
   throw new HerdrDelegateError({ code: "herdr_delegate_internal_error", message: "Agent start retry loop ended unexpectedly" });
 }
 
-async function prepareFreshAgent(mode: FreshMode, command: FreshOptions): Promise<FreshSetup> {
-  let handles = emptyHandles(command.name, command.kind);
+async function resolveDestinationTab(command: FreshOptions): Promise<string | null> {
+  if (command.tab !== null) return command.tab;
+  if (command.workspace === null) return null;
+  const workspaces = resultObject(await callHerdrJson(["workspace", "list"]), "workspace list").workspaces;
+  if (!Array.isArray(workspaces) || !workspaces.every(isObject)) throw invalidResponse("workspace list");
+  const byId = workspaces.filter((workspace) => workspace.workspace_id === command.workspace);
+  const matches = byId.length > 0 ? byId : workspaces.filter((workspace) => workspace.label === command.workspace);
+  if (matches.length === 0) throw new HerdrDelegateError({ code: "herdr_delegate_workspace_not_found", message: `Workspace ${command.workspace} not found` });
+  if (matches.length > 1) throw new HerdrDelegateError({ code: "herdr_delegate_workspace_ambiguous", message: `Workspace label ${command.workspace} is ambiguous`, workspace_ids: matches.map((workspace) => workspace.workspace_id) });
+  const activeTabId = matches[0]!.active_tab_id;
+  if (typeof activeTabId !== "string") throw invalidResponse("workspace list");
+  return activeTabId;
+}
+
+async function prepareFreshAgent(command: FreshOptions): Promise<FreshSetup> {
+  let handles = emptyHandles(command.name, command.kind), destinationTab: string | null;
   try {
+    destinationTab = await resolveDestinationTab(command);
     if (decodeAgentNames(await callHerdrJson(["agent", "list"])).includes(command.name)) throw new HerdrDelegateError({ code: "herdr_delegate_agent_name_conflict", message: `Agent ${command.name} already exists` });
-  } catch (error) { return { output: failure(mode, false, "preflight", error, handles, noCleanup("no_pane_created")) }; }
-  let pane: { pane_id: string; tab_id: string };
+  } catch (error) { return { output: failure(false, "preflight", error, handles, noCleanup("no_pane_created")) }; }
+  let pane: { pane_id: string; tab_id: string; workspace_id: string | null };
   try { pane = decodeSplit(await callHerdrJson(["pane", "split", "--current", "--direction", command.direction, "--cwd", command.cwd, "--no-focus"])); }
-  catch (error) { return { output: failure(mode, false, "split", error, handles, noCleanup("no_pane_created")) }; }
+  catch (error) { return { output: failure(false, "split", error, handles, noCleanup("no_pane_created")) }; }
   handles = { ...handles, ...pane };
   try {
     handles = await startFreshHerdrAgent(command, pane.pane_id);
-    return { handles, paneId: pane.pane_id };
+    return { handles, destinationTab };
   } catch (startError) {
     const inspection = await inspectAgent(command.name, handles, 120);
     if (inspection.ownership === "matching" && inspection.handles.pane_id === pane.pane_id) {
-      return { output: failure(mode, true, "start", startError, inspection.handles, noCleanup("matching_agent_preserved"), inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) };
+      return { output: failure(true, "start", startError, inspection.handles, noCleanup("matching_agent_preserved"), inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) };
     }
     if (inspection.ownership === "uncertain") {
-      return { output: failure(mode, false, "start", startError, handles, { action: "none", reason: "ownership_uncertain", ...(inspection.error ? { confirmation_error: inspection.error } : {}) }, inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) };
+      return { output: failure(false, "start", startError, handles, { action: "none", reason: "ownership_uncertain", ...(inspection.error ? { confirmation_error: inspection.error } : {}) }, inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) };
     }
-    return { output: failure(mode, false, "start", startError, handles, await closeCreatedPane(pane.pane_id)) };
+    return { output: failure(false, "start", startError, handles, await closeCreatedPane(pane.pane_id)) };
   }
 }
 
-async function moveFreshAgent(mode: FreshMode, command: FreshOptions, handles: AgentHandles): Promise<{ handles: AgentHandles } | { output: JsonObject }> {
-  if (command.place === "sibling") return { handles };
+const PI_REASONING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
+function requestedRuntime(nativeArgs: string[]): RuntimeValues {
+  let provider: string | null = null, modelArgument: string | null = null, reasoningLevel: string | null = null;
+  for (let index = 0; index < nativeArgs.length; index++) {
+    const argument = nativeArgs[index]!;
+    const equals = argument.indexOf("="), flag = equals < 0 ? argument : argument.slice(0, equals);
+    if (flag !== "--provider" && flag !== "--model" && flag !== "--thinking") continue;
+    const value = equals < 0 ? nativeArgs[++index] ?? null : argument.slice(equals + 1);
+    if (flag === "--provider") provider = value;
+    else if (flag === "--model") modelArgument = value;
+    else reasoningLevel = value;
+  }
+  let model = modelArgument;
+  if (model !== null) {
+    const slash = model.indexOf("/");
+    if (slash > 0) { provider = model.slice(0, slash); model = model.slice(slash + 1); }
+    const colon = model.lastIndexOf(":");
+    if (colon > 0 && PI_REASONING_LEVELS.has(model.slice(colon + 1))) {
+      if (reasoningLevel === null) reasoningLevel = model.slice(colon + 1);
+      model = model.slice(0, colon);
+    }
+  }
+  return { provider, model, reasoning_level: reasoningLevel };
+}
+async function readResolvedPiRuntime(sessionPath: string): Promise<RuntimeValues> {
+  const resolved = emptyRuntimeValues();
   try {
-    const moved = decodeMove(await callHerdrJson(["pane", "move", handles.pane_id!, "--new-tab", "--label", command.tabLabel, "--no-focus"]), handles);
+    const text = await Bun.file(sessionPath).text();
+    for (const line of text.split("\n")) {
+      if (!line) continue;
+      let event: unknown;
+      try { event = JSON.parse(line); } catch { continue; }
+      if (!isObject(event)) continue;
+      if (event.type === "model_change" && typeof event.provider === "string" && typeof event.modelId === "string") {
+        resolved.provider = event.provider; resolved.model = event.modelId;
+      } else if (event.type === "thinking_level_change" && typeof event.thinkingLevel === "string") resolved.reasoning_level = event.thinkingLevel;
+    }
+  } catch {}
+  return resolved;
+}
+function requestedValuesMatch(requested: RuntimeValues, resolved: ResolvedRuntimeValues): boolean | null {
+  const entries = Object.entries(requested).filter((entry): entry is [keyof RuntimeValues, string] => entry[1] !== null);
+  if (entries.length === 0 || entries.some(([key]) => resolved[key] === null)) return null;
+  return entries.every(([key, value]) => resolved[key] === value);
+}
+async function inspectFreshRuntime(command: FreshOptions, handles: AgentHandles): Promise<{ handles: AgentHandles; runtime: RuntimeState }> {
+  const requested = requestedRuntime(command.nativeArgs);
+  if (command.kind !== "pi") return { handles, runtime: { requested, resolved: emptyResolvedRuntimeValues(), verified: false, matches_requested: null } };
+  let inspectedHandles = handles, sessionPath: string | null = null;
+  try {
+    const envelope = await callHerdrJson(["agent", "get", command.name]);
+    inspectedHandles = decodeAgent(envelope, command.name, command.kind, "agent get");
+    sessionPath = decodePiSessionPath(envelope);
+  } catch {}
+  const values = sessionPath === null ? emptyRuntimeValues() : await readResolvedPiRuntime(sessionPath);
+  const subscriptionBilled = values.provider === "openai-codex" ? true : values.provider === "openai" ? false : null;
+  const resolved = { ...values, subscription_billed: subscriptionBilled };
+  const verified = resolved.provider !== null && resolved.model !== null && resolved.reasoning_level !== null && resolved.subscription_billed !== null;
+  return { handles: inspectedHandles, runtime: { requested, resolved, verified, matches_requested: requestedValuesMatch(requested, resolved) } };
+}
+function runtimeMismatch(handles: AgentHandles, runtime: RuntimeState): JsonObject | null {
+  if (runtime.matches_requested !== false) return null;
+  const error = new HerdrDelegateError({ code: "herdr_delegate_runtime_mismatch", message: "Resolved Pi runtime does not match the requested runtime", requested: runtime.requested, resolved: runtime.resolved });
+  return failure(true, "verify", error, handles, noCleanup("matching_agent_preserved"), { runtime });
+}
+
+async function moveFreshAgent(command: FreshOptions, destinationTab: string | null, handles: AgentHandles, runtime: RuntimeState): Promise<{ handles: AgentHandles } | { output: JsonObject }> {
+  if (destinationTab === null) return { handles };
+  try {
+    const moved = decodeMove(await callHerdrJson(["pane", "move", handles.pane_id!, "--tab", destinationTab, "--split", command.direction, "--no-focus"]), handles);
     if (!moved.changed) {
       const error = new HerdrDelegateError({ code: "herdr_delegate_move_unchanged", message: `Herdr did not move pane: ${String(moved.reason)}`, reason: moved.reason });
       const inspection = await inspectAgent(command.name, moved.handles, 120);
-      return { output: failure(mode, true, "move", error, inspection.handles, noCleanup("agent_started_preserved"), inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) };
+      return { output: failure(true, "move", error, inspection.handles, noCleanup("agent_started_preserved"), { runtime, ...(inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) }) };
     }
     return { handles: moved.handles };
   } catch (error) {
     const inspection = await inspectAgent(command.name, handles, 120);
-    return { output: failure(mode, true, "move", error, inspection.handles, noCleanup("agent_started_preserved"), inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) };
+    return { output: failure(true, "move", error, inspection.handles, noCleanup("agent_started_preserved"), { runtime, ...(inspection.terminalText === null ? {} : { terminal_text: inspection.terminalText }) }) };
   }
 }
 
@@ -249,61 +329,31 @@ async function callPrompt(name: string, text: string, timeoutMs?: number): Promi
   return callHerdrJson(args);
 }
 
-/** Runs the fresh-agent create → optional move → prompt → read pipeline. */
-export async function runFreshDelegatePipeline(command: Extract<DelegateCommand, { mode: "run" }>): Promise<JsonObject> {
-  const setup = await prepareFreshAgent("run", command); if ("output" in setup) return setup.output;
-  const placement = await moveFreshAgent("run", command, setup.handles); if ("output" in placement) return placement.output;
+/** Runs the fresh-agent create → verify → optional move → prompt → read pipeline. */
+export async function runFreshDelegatePipeline(command: DelegateCommand): Promise<JsonObject> {
+  const setup = await prepareFreshAgent(command); if ("output" in setup) return setup.output;
+  const inspection = await inspectFreshRuntime(command, setup.handles), mismatch = runtimeMismatch(inspection.handles, inspection.runtime); if (mismatch) return mismatch;
+  const placement = await moveFreshAgent(command, setup.destinationTab, inspection.handles, inspection.runtime); if ("output" in placement) return placement.output;
   let handles = placement.handles, prompt: PromptState;
   try { ({ handles, prompt } = decodePrompt(await callPrompt(command.name, command.prompt, command.timeoutMs), command.name, command.kind)); }
   catch (error) {
     const inspected = await inspectAgent(command.name, handles, command.lines);
-    return failure("run", true, "prompt", error, inspected.handles, noCleanup("agent_started_preserved"), { prompt: promptErrorState(error), ...(inspected.terminalText === null ? {} : { terminal_text: inspected.terminalText }) });
+    return failure(true, "prompt", error, inspected.handles, noCleanup("agent_started_preserved"), { runtime: inspection.runtime, prompt: promptErrorState(error), ...(inspected.terminalText === null ? {} : { terminal_text: inspected.terminalText }) });
   }
   let terminalText: string;
   try { terminalText = await readAgentTerminal(command.name, command.lines); }
-  catch (error) { return failure("run", true, "read", error, handles, noCleanup("agent_started_preserved"), { prompt }); }
-  if (prompt.settled === "blocked") return failure("run", true, "prompt", new HerdrDelegateError({ code: "herdr_delegate_agent_blocked", message: `Agent ${command.name} settled blocked` }), handles, noCleanup("agent_started_preserved"), { prompt, terminal_text: terminalText });
-  return { ok: true, mode: "run", created: true, agent: handles, prompt, terminal_text: terminalText };
-}
-
-/** Runs the fresh-agent create → optional move pipeline without prompting. */
-export async function launchFreshDelegatePipeline(command: Extract<DelegateCommand, { mode: "launch" }>): Promise<JsonObject> {
-  const setup = await prepareFreshAgent("launch", command); if ("output" in setup) return setup.output;
-  const placement = await moveFreshAgent("launch", command, setup.handles); if ("output" in placement) return placement.output;
-  return { ok: true, mode: "launch", created: true, agent: placement.handles };
-}
-
-/** Runs the existing-agent preflight → prompt → read pipeline without claiming fresh creation. */
-export async function promptExistingDelegatePipeline(command: Extract<DelegateCommand, { mode: "prompt" }>): Promise<JsonObject> {
-  let handles = emptyHandles(command.name), prompt: PromptState;
-  try { handles = decodeAgent(await callHerdrJson(["agent", "get", command.name]), command.name, null, "agent get"); }
-  catch (error) { return failure("prompt", false, "preflight", error, handles, noCleanup("existing_agent_not_found")); }
-  if (handles.status !== "idle" && handles.status !== "done") {
-    return failure("prompt", false, "preflight", new HerdrDelegateError({ code: "herdr_delegate_agent_not_idle", message: `Agent ${command.name} is ${handles.status ?? "unknown"}; prompt requires idle or done` }), handles, noCleanup("existing_agent_preserved"));
-  }
-  try { ({ handles, prompt } = decodePrompt(await callPrompt(command.name, command.prompt, command.timeoutMs), command.name, handles.kind)); }
-  catch (error) {
-    if (errorCode(error) === "agent_not_found") return failure("prompt", false, "prompt", error, handles, noCleanup("existing_agent_not_found"), { prompt: promptErrorState(error) });
-    const inspected = await inspectAgent(command.name, handles, command.lines);
-    const cleanup = inspected.ownership === "matching" ? noCleanup("existing_agent_preserved") : noCleanup(inspected.ownership === "missing" ? "existing_agent_not_found" : "existing_agent_ownership_uncertain");
-    return failure("prompt", false, "prompt", error, inspected.handles, cleanup, { prompt: promptErrorState(error), ...(inspected.terminalText === null ? {} : { terminal_text: inspected.terminalText }) });
-  }
-  let terminalText: string;
-  try { terminalText = await readAgentTerminal(command.name, command.lines); }
-  catch (error) { return failure("prompt", false, "read", error, handles, noCleanup("existing_agent_preserved"), { prompt }); }
-  if (prompt.settled === "blocked") return failure("prompt", false, "prompt", new HerdrDelegateError({ code: "herdr_delegate_agent_blocked", message: `Agent ${command.name} settled blocked` }), handles, noCleanup("existing_agent_preserved"), { prompt, terminal_text: terminalText });
-  return { ok: true, mode: "prompt", created: false, agent: handles, prompt, terminal_text: terminalText };
+  catch (error) { return failure(true, "read", error, handles, noCleanup("agent_started_preserved"), { runtime: inspection.runtime, prompt }); }
+  if (prompt.settled === "blocked") return failure(true, "prompt", new HerdrDelegateError({ code: "herdr_delegate_agent_blocked", message: `Agent ${command.name} settled blocked` }), handles, noCleanup("agent_started_preserved"), { runtime: inspection.runtime, prompt, terminal_text: terminalText });
+  return { ok: true, created: true, agent: handles, runtime: inspection.runtime, prompt, terminal_text: terminalText };
 }
 
 /** Emits one public JSON envelope and returns its process exit code. */
 export async function herdrDelegateMain(argv = process.argv.slice(2)): Promise<number> {
   let output: JsonObject;
-  if (process.env.HERDR_ENV !== "1") output = { ok: false, mode: argv[0] ?? null, created: false, stage: "environment", upstream_herdr_error: { code: "herdr_delegate_environment_required", message: "HERDR_ENV=1 is required" }, cleanup: noCleanup("no_pane_created") };
-  else try {
-    const command = parseHerdrDelegateArguments(argv);
-    output = command.mode === "run" ? await runFreshDelegatePipeline(command) : command.mode === "launch" ? await launchFreshDelegatePipeline(command) : await promptExistingDelegatePipeline(command);
-  } catch (error) {
-    output = { ok: false, mode: argv[0] ?? null, created: false, stage: "arguments", upstream_herdr_error: { code: "herdr_delegate_usage_error", message: error instanceof Error ? error.message : String(error) }, cleanup: noCleanup("no_pane_created") };
+  if (process.env.HERDR_ENV !== "1") output = { ok: false, created: false, stage: "environment", upstream_herdr_error: { code: "herdr_delegate_environment_required", message: "HERDR_ENV=1 is required" }, cleanup: noCleanup("no_pane_created") };
+  else try { output = await runFreshDelegatePipeline(parseHerdrDelegateArguments(argv)); }
+  catch (error) {
+    output = { ok: false, created: false, stage: "arguments", upstream_herdr_error: { code: "herdr_delegate_usage_error", message: error instanceof Error ? error.message : String(error) }, cleanup: noCleanup("no_pane_created") };
   }
   process.stdout.write(`${JSON.stringify(output)}\n`);
   return output.ok === true ? 0 : 1;
