@@ -6,6 +6,7 @@
   },
   "scripts": {
     "install-agents": "bun run scripts/install-agents.ts",
+    "install-skills": "bun run scripts/install-skills.ts",
     "test": "bun test"
   }
 }

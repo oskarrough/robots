@@ -7,7 +7,7 @@ description: Write direct, user-facing changelog entries from recent development
 
 Write clean changelog entries. Translate development work into what changed for someone using or building on the software.
 
-**In arbe, this skill is downstream of the binding contract in `docs/system/releases.md`**: every user-noticeable change adds its own bullet under `## [Unreleased]` in `docs/changelog.md`, **in the same jj change**, grouped under the `### <scope>` heading matching the commit prefix. Nothing below overrides that — this skill is how to write the bullet, not where or when. Retrospective curation (reconstructing notes from commits at release time) is the fallback for projects without that workflow, not the arbe way.
+**In arbe, this skill is downstream of the binding contract in `packages/skills/changelog/SKILL.md`**: every user-noticeable change adds its own bullet under `## [Unreleased]` in `docs/changelog.md`, **in the same jj change**, grouped under the `### <scope>` heading matching the commit prefix. Nothing below overrides that — this skill is how to write the bullet, not where or when. Retrospective curation (reconstructing notes from commits at release time) is the fallback for projects without that workflow, not the arbe way.
 
 ## What belongs
 

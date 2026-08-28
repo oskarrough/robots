@@ -2,6 +2,15 @@ Not so private public robot files.
 
   bunx skills add oskarrough/robots
 
+On this machine, skills are symlinked from this checkout into
+`~/.agents/skills` (the canonical store every agent directory points at), so
+local edits are live everywhere immediately — no push, no reinstall:
+
+  bun run install-skills
+
+Run it again after adding a new skill directory; `bunx skills add` is only for
+installing on other machines (note it copies, so updates there need a re-add).
+
 HERDR-DELEGATE
 ---------------
 
