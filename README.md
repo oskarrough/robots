@@ -2,15 +2,6 @@ Not so private public robot files.
 
   bunx skills add oskarrough/robots
 
-On this machine, skills are symlinked from this checkout into
-`~/.agents/skills` (the canonical store every agent directory points at), so
-local edits are live everywhere immediately — no push, no reinstall:
-
-  bun run install-skills
-
-Run it again after adding a new skill directory; `bunx skills add` is only for
-installing on other machines (note it copies, so updates there need a re-add).
-
 HERDR-DELEGATE
 ---------------
 
@@ -99,28 +90,38 @@ SKILLS
 - [arbe-bro](skills/bro/SKILL.md) — restate the last message in plain human language
 - [arbe-product-description](skills/product-description/SKILL.md) — outside-in, feature-by-feature behaviour spec of a product, verified and triaged
 
-To create a new skill: 
-    Run `bunx skills init skills/my-skill`.
-    Add a link to the skill in the README.md.
+Every agent reads skills from one canonical store, `~/.agents/skills/<name>/`.
+Some agents read it directly, the rest (Claude Code, Pi, ...) hold symlinks
+into it, e.g. `~/.claude/skills/<name>` → `~/.agents/skills/<name>`. So
+whatever sits in the store is what every agent sees.
 
-Installing copies each skill into `~/.agents/skills/<name>/` and symlinks it
-into the agent directories (`~/.claude/skills/<name>`, etc.). That copy is
-device-local, so always land edits through git — several machines run these,
-and an install that skipped the push leaves no way to tell which machine is
-right:
+**On the machine holding this checkout**, point the store at the checkout
+itself:
 
-1. Edit `skills/<name>/SKILL.md`
-2. Commit and push to `main`
-3. `bunx skills update -g -y` (or `bunx skills update arbe-delegate` for one)
+    bun run install-skills
 
-While iterating you can install straight from the working copy, uncommitted
-edits included:
+That replaces each `~/.agents/skills/arbe-*` entry with a symlink to its
+`skills/<dir>` here (skills from other repos are left alone). From then on,
+edits in this repo are live in every agent immediately — no push, no
+reinstall. Re-run it only after creating a new skill directory. Don't run
+`bunx skills update` on the arbe skills here: it would replace the symlinks
+with copies from GitHub (if that happens, `bun run install-skills` again).
 
-    bunx skills add ~/Sites/robots -g -y -s '*'
+**On any other machine**, the store holds copies, so changes flow through git:
 
-Close that loop with a push. Until you do, this machine is the only one with
-the change, and the next `skills update` silently reverts it.
+1. Edit `skills/<name>/SKILL.md`, commit, push to `main`
+2. There: `bunx skills add oskarrough/robots -g -y -s '*'`
+   (or `bunx skills update -g -y` once installed)
 
-That command reports `Failed to install 12` even when it worked — the
-PromptScript target refuses `-g` and the CLI counts it as total failure. Check
+The add command reports `Failed to install` even when it worked — the
+PromptScript target refuses `-g` and the CLI counts it as a failure. Check
 `~/.agents/skills/<name>/SKILL.md` rather than the banner.
+
+Still push promptly even though this machine doesn't need it: the other
+machines only ever see what's on `main`.
+
+To create a new skill:
+
+1. `bunx skills init skills/my-skill`
+2. Add a link to it in this README
+3. `bun run install-skills`
