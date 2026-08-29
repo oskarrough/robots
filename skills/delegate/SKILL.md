@@ -15,20 +15,16 @@ Two modes: **delegate and return** (start, brief, wait, read — the default), o
 
 ## Fast path: `herdr-delegate`
 
-When `command -v herdr-delegate` succeeds, use it for standard single-worker pipelines instead of one agent turn per herdr command:
+When `command -v herdr-delegate` succeeds, use it for a standard fresh-worker pipeline instead of one agent turn per herdr command. One invocation, no subcommands: `herdr-delegate NAME PROMPT --kind KIND [options] -- [agent args...]`
 
 ```sh
 # Fresh worker: split → start → prompt → wait → read; leaves the worker warm
-herdr-delegate run <name> '<prompt>' --kind pi --timeout 60000 -- --provider openai-codex --model gpt-5.6-luna
-
-# Fresh worker without a prompt; ready for handoff
-herdr-delegate launch <name> --kind pi -- --provider openai-codex --model gpt-5.6-luna
-
-# Existing worker: prompt → wait → read; keeps its conversation context
-herdr-delegate prompt <name> '<prompt>' --timeout 60000
+herdr-delegate <name> '<prompt>' --kind pi --timeout 60000 -- --provider openai-codex --model gpt-5.6-luna
 ```
 
-One JSON envelope with handles, status, and raw `terminal_text`. `ok` means herdr accepted the prompt and returned readable pane text — not that the turn ran or the task succeeded; apply §3's settle checks before trusting it. On failure follow `stage`, `upstream_herdr_error`, `cleanup`. `prompt` refuses workers that are working, blocked, or unknown, and keeps context — `/new` first for an unrelated task (§5). Use the manual commands for multi-worker orchestration, steering, or unusual placement.
+Both NAME and PROMPT are required positionals — there is no promptless launch form, and no subcommand for existing workers: to prompt a warm worker, use `herdr agent prompt <name> '<prompt>' --wait` directly (it refuses workers that are working, blocked, or unknown, and keeps context — `/new` first for an unrelated task, §5).
+
+One JSON envelope with handles, status, and raw `terminal_text`. `ok` means herdr accepted the prompt and returned readable pane text — not that the turn ran or the task succeeded; apply §3's settle checks before trusting it. On failure follow `stage`, `upstream_herdr_error`, `cleanup`. Use the manual commands for multi-worker orchestration, steering, or unusual placement.
 
 ## 1. Pick a worker
 
