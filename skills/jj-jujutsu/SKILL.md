@@ -47,6 +47,8 @@ jj commit -m "msg" -- 'cwd:"apps/www/src/routes/houses/[house_id]"'             
 
 Unmatched paths are dropped **without error** — `commit`/`squash`/`split`/`restore` report success and move only the files that matched.
 
+**Same failure mode, no globs needed: wrong directory level.** A plain path that doesn't exist also matches nothing and is dropped silently. If a commit's stat check comes back missing a file you named, check the real path with `jj file list <dir>/` before trusting a remembered path — repo conventions sometimes nest a level deeper than the doc says.
+
 **`-m "msg"` before `--`, never after.** Everything after `--` parses as filesets, so a trailing `-m` becomes a fileset arg (parse error or silent editor fallback); bare `commit`/`split` opens an editor too — both hang non-interactive shells. Always `jj commit -m "msg" -- f1 f2`.
 
 **MANDATORY after every `jj commit -- <files>`: `jj diff -r @- --stat`, check the file list is what you meant.** A typo'd or unmatched path produces a partial or empty commit that reports success (has shipped commits missing their key file twice). Stranded files stay in the new `@` — fix with another `jj commit` or `jj squash --into @-`.
