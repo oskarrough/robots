@@ -15,6 +15,8 @@ No staging area — the working copy IS the current change. `@` = current, `@-` 
 
 **Prefer explicit change IDs over `@`/`@-`.** Parallel agents move `@` between your commands. Capture the ID up front (`jj log -r @ --no-graph -T change_id`) and pass it: `jj split -r <id>`, `jj describe -r <id>`, `jj squash --from <A> --into <B>`, `jj abandon -r <id>`. `jj commit` has no `-r` and always acts on `@` — `jj edit <id>` first if `@` may have moved. Always pass explicit file paths too, with `-m` before `--` (see Selective changes). Re-check `jj st` before destructive ops.
 
+**Nothing is pushed yet, so fix the commit instead of appending one.** A follow-up to work you just committed (a typo, a stale pointer you spotted a minute later, a review nit) belongs *in* that commit: `jj squash -r <id> -u` folds it into its parent, `jj squash --from <A> --into <B> -u` targets any commit. Start a new commit only when the work is a genuinely different subject. The log should read as the change you'd want reviewed, not a diary of the order you noticed things.
+
 **Leave `@` empty and undescribed when done.** A described `@` is a trap for the next `jj describe`. Non-empty revisions need a description (fix with `jj describe -r <id> -m "..."`). Before finishing, scan `jj log` for non-empty undescribed revisions — usually orphans from a squash or rebase.
 
 **Before writing code, `jj log --limit 3`.** If `@` has a description or prior changes, `jj new` first (both `jj describe -m` and `jj commit -m` overwrite the current description). Safe sequence: `jj new` → capture id → work → `jj commit -m "..."`.
