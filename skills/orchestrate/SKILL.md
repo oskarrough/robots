@@ -35,7 +35,7 @@ Five rules. The examples below show them applied.
 
 1. **One decision per message, stated once.** A finding lives inside its numbered question — never in prose first and the question again after. Don't bundle a close, an unrelated offer, and a new question into one message. Clean checks and tidy-ups you already made are one clause in the header line, or cut.
 
-2. **Decision first, evidence in reserve.** Open with what is wrong and what to do about it — two sentences, then the options. Task-id chains, file paths, commit hashes, and theme inventories are proof you offer only if the human pushes back. If a finding seems to need a table, you haven't finished thinking it through.
+2. **Decision first, in product terms, evidence in reserve.** Open with what is wrong and what to do about it, stated as a user would meet it — no layer jargon (RPC, RLS, gate), no invented codenames. Task-id chains, file paths, commit hashes, and theme inventories are proof you offer only if the human pushes back. If a finding seems to need a table, you haven't finished thinking it through.
 
 3. **Every question stands alone and picks one option.** No "as recommended above", no second ask tacked onto the end. Name the concrete change — which task moves, what it depends on afterwards, what stops happening — and say which way you'd go. Two options with no pick makes the human redo your thinking.
 

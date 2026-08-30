@@ -22,9 +22,9 @@ When `command -v herdr-delegate` succeeds, use it for a standard fresh-worker pi
 herdr-delegate <name> '<prompt>' --kind pi --timeout 60000 -- --provider openai-codex --model gpt-5.6-luna
 ```
 
-Both NAME and PROMPT are required positionals — there is no promptless launch form, and no subcommand for existing workers: to prompt a warm worker, use `herdr agent prompt <name> '<prompt>' --wait` directly (it refuses workers that are working, blocked, or unknown, and keeps context — `/new` first for an unrelated task, §5).
+NAME and PROMPT are both required — fresh workers only. A warm worker gets `herdr agent prompt <name> '<prompt>' --wait` directly (refuses busy workers, keeps context — `/new` first for an unrelated task, §5).
 
-One JSON envelope with handles, status, and raw `terminal_text`. `ok` means herdr accepted the prompt and returned readable pane text — not that the turn ran or the task succeeded; apply §3's settle checks before trusting it. On failure follow `stage`, `upstream_herdr_error`, `cleanup`. Use the manual commands for multi-worker orchestration, steering, or unusual placement.
+One JSON envelope with handles, status, and raw `terminal_text`. `ok` means herdr accepted the prompt and returned pane text — not that the turn ran or succeeded; apply §3's settle checks. On failure follow `stage`, `upstream_herdr_error`, `cleanup`. Manual commands for multi-worker orchestration, steering, or unusual placement.
 
 ## 1. Pick a worker
 
@@ -35,6 +35,8 @@ Three roles, and no model wins price, speed, and trust at once:
 - **reviewer** — smart, and never the model that wrote the diff.
 
 Smart direction + smart review + cheap implementation beats one expensive model doing all three — but only while the review actually happens (§4). Escalate the implementer when a brief keeps failing, not by default.
+
+The standing flow: glm-5.3-flash implements most things (cheap, fast); sol plans the hard stuff and reviews it after. Review by sol is mandatory for nitty-gritty work (prod migrations, dispatch/turn semantics, retry/error contracts) and merely good elsewhere — it's the expensive half, so spend it where a miss hurts. Opus 5 (`--kind claude`) is still king for UI design work.
 
 Current preferences — volatile, the only place ids live. Which account has headroom changes week to week; ask Oskar before assuming anything is free, and don't re-add a benched model (terra, haiku, deepseek) without him:
 
@@ -59,27 +61,27 @@ herdr agent start <name> --kind pi --pane <pane-id> -- --provider openai-codex -
 herdr agent start <name> --kind cursor --pane <pane-id> -- --model cursor-grok-4.6-high
 ```
 
-**Every pane and agent gets a distinct name — no exceptions.** It's the only handle you and the human have on a worker. Name by role and scope (`reviewer`, `doc-env`, `flash-migrate`), never `claude` or `worker`. Don't triple-name: `pane rename` is only for panes with no registered agent (dev servers, log tails) — name those too. `tab create --label` when a batch gets its own tab.
+**Every pane and agent gets a distinct name — no exceptions.** It's the only handle you and the human have on a worker. Name it after the job: max 3 plain words carrying object and action, so a bystander can answer "doing what to what?" (`drop-old-secrets`, `review-secrets`; not `stop-retrying` — retrying what?). No task ids, model names, or jargon; never `claude` or `worker`. `pane rename` is only for panes with no registered agent (dev servers, log tails) — name those too; `tab create --label` when a batch gets its own tab.
 
 ## Run a crew, not a dispatch
 
-Default to a standing tab of ~4 warm workers you feed small tasks. Spawning costs a real minute; a warm crew makes dispatch nearly free, which flips the economics — small asks, steered often, with you holding the quality bar continuously instead of encoding it in one huge brief. `/new` between tasks is cheaper than a new pane; `agent list` is the work queue. Start a fresh agent only when kind/model must differ, isolation is part of the proof, the worker is near its context ceiling, or it has drifted.
+Default to a standing tab of ~4 warm workers you feed small tasks. Spawning costs a real minute; a warm crew makes dispatch nearly free, which flips the economics — small asks, steered often, with you holding the quality bar continuously instead of encoding it in one huge brief. `/new` between tasks is cheaper than a new pane; `agent list` is the work queue. Tedious ops chains — push migrations, deploy, verify, regenerate types — go to a general glm assistant too, briefed to ping back; the orchestrator's context is for decisions, not mechanics. Start a fresh agent only when kind/model must differ, isolation is part of the proof, the worker is near its context ceiling, or it has drifted.
 
 Crew mode makes two things harder — spend the savings there:
 
 - **Fencing.** Warm workers in one repo collide constantly on the shared working copy. Every dispatch names its fileset AND the off-limits files, every time.
 - **Idle for the wrong reason.** A worker that never got its prompt looks exactly like one waiting for work — keep §3's settle checks honest.
 
-Slice by what actually parallelizes: additive work (separate features, docs, routes) fans out because the files are disjoint; a deletion sweep cascades type errors into callers, so give it one owner and fan out around it. Past ~5 panes in a tab, panes go unreadably narrow — read transcripts from disk (Gotchas).
+Slice by what actually parallelizes: additive work (separate features, docs, routes) fans out because the files are disjoint; a deletion sweep cascades type errors into callers, so give it one owner and fan out around it. Max 4 workers per tab so the human can actually see them: 2x2, or one row of 3; a 5th gets a new tab (overfull panes are unreadable — Gotchas).
 
 ## 2. Brief
 
 Size an ask so its result reviews and ships in one sitting, and a drifted worker loses one increment rather than a day. Too big when it needs many unrelated scope bullets, spans surfaces that deploy separately, or you can't name what you'd deploy when it lands. Split before briefing.
 
-Long or reusable briefs go in a file (`brief-<task>.md`, prompt with the path plus "follow it exactly"); a two-line ask is just a prompt. Either way the brief is yours to write — it encodes design decisions. A scout's findings are input to it, not a draft of it. Substance lives in the tracked task (what/why/done-when/evidence); the brief carries this run's mechanics: fileset, report shape, whichever rules below apply.
+Long or reusable briefs go in a file (`brief-<task>.md`, prompt with the path plus "follow it exactly"); a two-line ask is just a prompt. Running a crew, hoist the recurring rules (fencing, jj, scoped checks, the contracts below) into one `rules-common.md` every brief opens with "read it first, binding" — each brief then carries only its own task. Either way the brief is yours to write — it encodes design decisions. A scout's findings are input to it, not a draft of it. Substance lives in the tracked task (what/why/done-when/evidence); the brief carries this run's mechanics: fileset, report shape, whichever rules below apply.
 
 - **Fence the shared working copy by dependency direction, not directory.** Workers reach down into shared layers to thread a parameter; ask what the *other* live workers' tasks depend on, not just where they live, and name the off-limits files: "do not edit X, Y, Z — another worker owns them; if your change genuinely requires one, stop and ask." When a collision lands anyway, the unblock is usually a split (the half that needs the contended file vs. the half that doesn't), not a wait.
-- **The deliverable is a compact end-of-turn report (≤40 lines) read from the pane.** Never ask a worker to *commit* a report — gitignored `tmp/` silently drops it. Long output (measurements, inventories) goes in a file you read from disk.
+- **The deliverable is a compact end-of-turn report — max 10 lines — read from the pane.** Never ask a worker to *commit* a report — gitignored `tmp/` silently drops it. Long output (measurements, inventories) goes in a file you read from disk.
 - Ask for plain language — workers write like patent lawyers, and reports get relayed to the human. `/arbe-bro` is the register.
 - **A test can synthesize its own input and prove nothing.** When a fix keys on another service's data shape, require a `file:line` citation of the *producing* code.
 - Don't name skills only your harness has — they don't exist inside pi/cursor workers and stall them at a fake blocker. Point at the SKILL.md path on disk or inline the rules, and name local code precedent.
@@ -135,6 +137,7 @@ The review is what makes a cheap implementer safe, so it's the half not to skip:
 - **Reproduce a reported blocker outside the worker's change before believing it** — a cold-started service 404s in ways a worker can't distinguish from its own bug. Then make it compound: file the bad diagnostic, not just the unblock.
 - A blocked worker is usually 30 seconds of your time, not theirs. Check the *current* tree state when unblocking, not the state you briefed against — the contended file may already be committed.
 - **Your context is for taste, not code-reading.** Module reading, flow tracing, line-verifying a diff — all delegable. Keep the conclusion, not the files.
+- **`jj describe` mints a new commit id** — reword a description mid-review and the reviewer is auditing an id that no longer exists. Re-steer with the new id, or hold the rewording until the review lands.
 - **A concurrent commit can absorb your worker's edits or change a contract under them** — jj snapshots the working copy, so another pane committing a file your worker edited takes those edits with it ("no remaining diff" is then not failure). After any fix round on a busy copy: `jj log` for mid-flight commits, `jj show --stat` for where your edits actually live, and point the re-review at interactions with those commits.
 - A cheap scout's conclusions can be right while its file:line citations are invented. Spot-check the load-bearing paths before pasting them into an implementation brief.
 - **"I found nothing" is the easiest wrong answer, and it arrives with full confidence.** Absence is only evidence if the search was right: a negative brief says *how* to look (time window, commit count, the files the work would touch) and requires the report to state its method. Sanity-check any "nothing found" against what you already believe.
@@ -151,7 +154,6 @@ herdr agent prompt <name> "/new" --wait --timeout 15000
 - pi degrades past ~200–250k tokens (statusline `X%/272k`). Near the ceiling, `/new` plus a fresh brief beats steering the warm session.
 - Drift looks like abandoning the brief for side questions. Prompt an exit: "stop investigating, post your report with what you verified, then you are done." Anything real it surfaced is yours to chase in fresh context.
 - `/new` returns `agent_prompt_stalled` (slash commands finish instantly; herdr sees no state change) — confirm with `agent read`. It also resets pi's thinking level to the start args.
-- **One orchestration, one tab**: `pane move <pane> --new-tab --label "<name>"` for the first worker, `pane move <pane2> --tab <tab-id> --split down` for the rest, `tab rename` to match the session's numbering.
 - **Close panes you created** once their work is committed and reviewed (`pane close <pane-id>`; leave the human's and other orchestrators'). Lingering settled panes crowd the tab and read as live workers to the next orchestrator.
 
 ## Gotchas
@@ -163,17 +165,20 @@ herdr agent prompt <name> "/new" --wait --timeout 15000
 - **Check `agent list` before reusing a name** — duplicates make every agent-addressed command ambiguous and collapse in the sidebar.
 - **`--wait` timeout ≠ stuck** — exits 1 with `{"error":{"code":"timeout"}}` but the worker is usually still working. Don't re-prompt; poll `agent get` until `agent_status` leaves `working`.
 - **Panes in a `tab create --no-focus` tab are permanently unstartable** — healthy-looking prompt, `agent_status: "unknown"`, `agent_pane_busy` forever. Build workers where you are (`pane split --current`), start them, then `pane move` into the new tab.
+- **Don't `pane move` a worker while `herdr-delegate` is still waiting on it** — the wait dies with `agent_not_running` and exits 1 while the worker runs on fine. Move the pane after the envelope returns, or orchestrate manually when placement matters mid-run.
+- **`agent stop` does not exist** — halt a worker with `send-keys <name> esc`, then `pane close <pane>` once it's truly done.
 - **Try `agent start` immediately after `pane split`** — on `agent_pane_busy`, wait ~5–10s and retry once; still refusing is a dud pane, close and split fresh. `pane move` never disturbs a live agent but silently no-ops on a zoomed tab — `pane zoom <pane-id> --off` first.
 - **`--source recent-unwrapped` can return empty for pi panes**; `visible` works.
 - **`Codex error: The usage limit has been reached`** settles as `done` ~15s after briefing with nothing done — a fast `done` on a big slice is the tell. Rebuild with a different model and tell the human their sub quota is out. General rule, any provider: `done` with no assistant text is not a completion (§3).
-- **Past ~5 panes in a tab, `agent read` returns confetti** — panes go ~15 columns wide. Read the transcript from disk:
+- **Past 4 panes in a tab, `agent read` returns confetti** — panes go ~15 columns wide. Keep tabs at 4 (2x2); read a crowded pane's transcript from disk:
   ```sh
-  # Claude Code: ~/.claude/projects/<slug>/<uuid>.jsonl
-  jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' <f> | tail -60
-  # pi: ~/.pi/agent/sessions/<slug>/<ts>_<uuid>.jsonl — records nest one level deeper
-  jq -r 'select(.type=="message" and .message.role=="assistant") | (.message.content[]? | select(.type=="text") | .text)' <f> | tail -60
+  f=$(herdr agent get <name> | jq -r .result.agent.agent_session.value)
+  # Claude Code sessions:
+  jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' "$f" | tail -60
+  # pi sessions — records nest one level deeper:
+  jq -r 'select(.type=="message" and .message.role=="assistant") | (.message.content[]? | select(.type=="text") | .text)' "$f" | tail -60
   ```
-  A top-level `.role`/`.content` filter silently returns nothing on a pi session, which reads as "no report" when the report is right there.
+  `agent get` nests everything under `.result.agent` (`.agent_status`, `.agent_session`) — a guessed shorter path returns null, not an error, so a watcher built on it waits forever. Likewise a top-level `.role` filter on a pi session: silence that reads as "no report".
 - **A prompt sent while pi is self-compacting is silently eaten** — if `agent_status` never leaves idle, read the pane and re-send. "Queued message for after compaction" fires on its own; don't re-send, and don't `esc` a compaction near the finish line.
 - **Switching a pi model mid-session is unreliable** — `/model` opens a picker the full `id:level` string doesn't match. If the model matters, rebuild the pane with the right start args. Claude Code takes `/model opus` directly.
 
