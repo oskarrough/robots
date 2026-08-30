@@ -1,6 +1,6 @@
 ---
 name: arbe-benchmark-agent-guidance
-description: Benchmark skills, AGENTS.md, system prompts, harnesses, models, and reasoning levels with controlled before/after agent runs. Use when tuning agent guidance, comparing runtimes or models, measuring tokens/tool calls/failures, or checking whether a prompt change actually improves behavior.
+description: "Prove a change to agent guidance helped: fix the task, change one variable, run fresh agents before and after, compare tokens, tool calls, and failures. Use when tuning skills, AGENTS.md, or system prompts, or comparing models and reasoning levels."
 ---
 
 # Benchmark agent guidance

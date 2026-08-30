@@ -1,6 +1,6 @@
 ---
 name: arbe-discover-primitives
-description: Distill an unfamiliar repo into at most 10 reusable primitives, capability groups, and a plain dependency graph — a mental model, not an inventory. Use when deciding whether a codebase can be wrapped, forked, or exposed as a library/MCP server, or when briefing someone on what is reusable with the product shell stripped away. Describes what exists; use arbe-diagram-first to design a new shape and arbe-improve-codebase to change one.
+description: Distill an unfamiliar repo into at most 10 reusable primitives and a plain dependency graph — a mental model, not an inventory. Use when deciding whether a codebase can be wrapped, forked, or exposed as a library or MCP server. Describes what exists; arbe-diagram-first designs a new shape, arbe-improve-codebase changes one.
 ---
 
 # Discover primitives

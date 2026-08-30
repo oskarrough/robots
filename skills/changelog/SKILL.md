@@ -1,6 +1,6 @@
 ---
 name: arbe-changelog
-description: Write direct, user-facing changelog entries from recent development work. Use for release notes, sprint summaries, or CHANGELOG updates.
+description: Turn development work into user-facing changelog entries. Use for CHANGELOG updates, release notes, and sprint summaries. Not general docs — use arbe-documentation.
 ---
 
 # Changelog

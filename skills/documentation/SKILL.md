@@ -1,6 +1,6 @@
 ---
 name: arbe-documentation
-description: Diátaxis-style four-mode docs (tutorial, how-to, reference, explanation) — keep them separate, lead with the point, link to code. Use when authoring or restructuring user-facing documentation.
+description: Diátaxis four-mode docs — tutorial, how-to, reference, explanation kept separate. Use when authoring or restructuring user-facing documentation. Not changelog entries (arbe-changelog) or behavior specs (arbe-product-description).
 ---
 
 # Documentation

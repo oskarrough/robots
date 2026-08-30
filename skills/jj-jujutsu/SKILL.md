@@ -1,6 +1,6 @@
 ---
 name: arbe-jj-jujutsu
-description: Use jj/jujutsu instead of git. Covers change vs commit, no staging area, explicit revisions, and safe split/restore. Use for version-control or git commands.
+description: Use for any version-control or git command — we use jj (jujutsu) instead. Covers change vs commit, no staging area, explicit revisions, safe split and restore.
 ---
 
 # Version control (jj)

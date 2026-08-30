@@ -1,6 +1,6 @@
 ---
 name: arbe-mull
-description: Run a structured six-stage design session (clarify → questions → research → design → outline → plan) with a review gate between each stage. Use when working through an idea or spec that needs serious thinking before any code is written.
+description: Run a six-stage design session — clarify → questions → research → design → outline → plan — with a review gate between each. Use for an idea or spec that needs serious thinking before any code. Stops at the plan. For one shape question, arbe-diagram-first is faster.
 ---
 
 # Mull

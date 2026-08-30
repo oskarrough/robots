@@ -1,6 +1,6 @@
 ---
 name: arbe-review
-description: Two-mode code review — diff review after implementing a task, and sweep review across the codebase that creates follow-up tasks. Use after implementing a task or when sweeping the repo.
+description: "Two-mode code review: diff review after implementing a task, and a sweep across the codebase that creates follow-up tasks. Use after finishing a change or when reviewing someone else's. Single diff or single file scale — arbe-pipeline-audit for a call path, arbe-improve-codebase for modules."
 ---
 
 # How to review

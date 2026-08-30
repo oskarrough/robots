@@ -1,6 +1,6 @@
 ---
 name: arbe-orchestrate
-description: Triage a backlog, design doc, bug report, or feature area and prepare work so it's ready to hand to builder agents — surface issues one at a time, wire deps, recommend dispatch order. Use when the user says "orchestrate", "triage", reports something broken, or points you at an area to prep for dispatch. This decides *what* to hand off and in what order; to actually run the workers, see arbe-delegate.
+description: Triage a backlog, design doc, or feature area into a dispatch plan — surface issues one at a time, wire dependencies, recommend an order. Use when the user asks to orchestrate or triage, points you at an area to prep for handoff, or reports a problem they want tracked rather than fixed now. Decides what to hand off; arbe-delegate runs the workers.
 ---
 
 # Orchestrate
