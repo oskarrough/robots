@@ -22,7 +22,7 @@ When `command -v herdr-delegate` succeeds, use it for a standard fresh-worker pi
 herdr-delegate <name> '<prompt>' --kind pi --timeout 60000 -- --provider openai-codex --model gpt-5.6-luna
 ```
 
-NAME and PROMPT are both required — fresh workers only. A warm worker gets `herdr agent prompt <name> '<prompt>' --wait` directly (refuses busy workers, keeps context — `/new` first for an unrelated task, §5).
+NAME and PROMPT are both required — fresh workers only. A warm worker gets `herdr agent prompt <name> '<prompt>'` directly (refuses busy workers, keeps context — `/new` first for an unrelated task, §5), watched per §3.
 
 One JSON envelope with handles, status, and raw `terminal_text`. `ok` means herdr accepted the prompt and returned pane text — not that the turn ran or succeeded; apply §3's settle checks. On failure follow `stage`, `upstream_herdr_error`, `cleanup`. Manual commands for multi-worker orchestration, steering, or unusual placement.
 
@@ -101,9 +101,16 @@ Long or reusable briefs go in a file (`brief-<task>.md`, prompt with the path pl
 
 ## 3. Watch and steer
 
-One worker: `agent prompt --wait` (or `agent wait`) blocks until the first settled state — don't poll. Several: no native multi-wait exists, so poll `agent list`: watch an explicit name list (the human and other orchestrators run panes too), print `.name` not `.agent`, report `blocked` immediately, and only trust idle/done per the settle check below.
+Prompt fire-and-forget, then watch with a detached wait. It keeps your turn free and scales to any number of workers — one background wait per name — where `--wait` blocks your whole turn (and aborting it doesn't un-send the prompt; the worker runs on):
 
-**A settle is a claim, not a result.** `agent_status` alone is unreliable: `agent prompt --wait` has returned `done` at submit time before the agent started, and pi flaps idle between tool calls, defeating 10–15s debounces (cursor too). A real settle needs status in {idle, done} AND `pane read <pane> --source visible` free of spinner text — grep `Working\.\.\.|esc to interrupt|⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` — twice, 20s apart. Wrap that in a `settled()` shell function and the polling loop becomes reliable.
+```sh
+herdr agent prompt <name> '<brief>'
+herdr agent wait <name> --until done --until blocked   # run in background; chain `herdr notification show` to ping the desktop
+```
+
+Watch an explicit name list — the human and other orchestrators run panes too — and act on `blocked` immediately. pi workers carry the `herdr-agent-state` extension, so done/blocked are lifecycle signals, not guesses; the checks below guard the *result*.
+
+**A settle is a claim, not a result.** `agent_status` alone can lie (`done` at submit time before the agent started; idle-flapping between tool calls on pi and cursor). A real settle needs status in {idle, done} AND `pane read <pane> --source visible` free of spinner text — grep `Working\.\.\.|esc to interrupt|⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` — twice, 20s apart.
 
 Then read the pane and classify before acting. The predicate is *visible assistant text* (thinking-only counts as empty) — never tokens or elapsed time; a run can bill tokens and produce nothing:
 
