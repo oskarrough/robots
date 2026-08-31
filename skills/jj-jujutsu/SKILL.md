@@ -36,7 +36,11 @@ jj abandon -r <id>                       # discard empty revision
 jj restore --from main <file>            # restore a file from another revision
 ```
 
-**`jj run <shell_command> -r <revset> -j <jobs>`** runs a command across a set of revisions in parallel, each with its own private working copy (e.g. `jj run 'cargo check' -r 'trunk()..@' -j 4`) — still a stub/WIP on our installed jj 0.41 (`jj run --help` says "does not work yet").
+**`jj run -r <revset> -- <command>`** runs a command in an isolated working copy for each revision, then amends each revision with command changes by default. Use `--root` when the command expects the repository root. For side-effect-only commands such as deployment, add `--no-integrate-operation`: external effects still happen, but build artifacts and other file changes stay out of shared history. This is the safe way to deploy a committed revision while parallel agents have unrelated working-copy edits.
+
+```sh
+jj run --no-integrate-operation -r <commit> --root -- bash -lc 'bun install --frozen-lockfile && bun run deploy conductor www'
+```
 
 ## Selective changes
 
