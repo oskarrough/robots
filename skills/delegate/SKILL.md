@@ -43,7 +43,7 @@ Current preferences — volatile, the only place ids live. Which account has hea
 | role | model |
 | --- | --- |
 | slow, hard thinking; the review gate | Opus 5: `--kind claude -- --model opus --effort high` (`xhigh` for hard implementation or adversarial review). `gpt-5.6-sol:high` for the hardest cross-layer work. |
-| fast exploring, scouting, smoke tests | `gpt-5.6-luna` (Codex sub) or `cursor-grok-4.6-high` (`--kind cursor`). |
+| fast exploring, scouting, smoke tests | `z-ai/glm-5.3-flash` via `--kind pi` — first pick right now (Oskar, 2026-09-01): spin up many, demand a few plain lines back, no jargon; drifts without tight direction. Also `gpt-5.6-luna` (Codex sub) or `cursor-grok-4.6-high` (`--kind cursor`). |
 | cheap, stable implementer | `z-ai/glm-5.3-flash` via `--kind pi` (OpenRouter, per-token; max output 131k). `gpt-5.6-sol:medium` when the Codex sub has headroom. |
 
 ```sh
@@ -82,15 +82,17 @@ Long or reusable briefs go in a file (`brief-<task>.md`, prompt with the path pl
 - **Fence by dependency direction, not directory.** Workers reach down into shared layers to thread a parameter, so ask what the *other* live workers' tasks depend on, not just where they live, and name the off-limits files: "do not edit X, Y, Z — another worker owns them; if your change genuinely requires one, stop and ask." When a collision lands anyway, the unblock is usually a split — the half that needs the contended file vs. the half that doesn't — not a wait.
 - **The deliverable is a compact end-of-turn report — max 10 lines — read from the pane.** Never ask a worker to *commit* a report; gitignored `tmp/` silently drops it. Long output (measurements, inventories) goes in a file you read from disk.
 - Ask for plain language — workers write like patent lawyers, and reports get relayed to the human. `/arbe-bro` is the register.
+- **Proof is using arbe, not test code** (Oskar, 2026-09-01): brief for one live CLI probe in a test house with the thread id in the report; a unit test only where a probe can't see the behavior. Same for comments: none that restate the code.
 - **A test can synthesize its own input and prove nothing.** When a fix keys on another service's data shape, require a `file:line` citation of the *producing* code.
-- Don't name skills only your harness has — they don't exist inside pi/cursor workers and stall them at a fake blocker. Point at the SKILL.md path on disk or inline the rules, and name local code precedent.
+- Don't name skills only your harness has — they don't exist inside pi/cursor workers and stall them at a fake blocker. Point at the SKILL.md path on disk (resolve it first: `readlink -f ~/.claude/skills/<name>`; most live under `~/sites/robots/skills/`, not the repo's `packages/skills/`) or inline the rules, and name local code precedent. A wrong path is a real blocker to a worker that was told the file is binding.
 - **"Scan the codebase for X" needs a measurement, not an adjective.** Measure first yourself; hand over the numbers, a cap, exclusions, and keep-criteria. Ungrounded, the same brief rewrites hundreds of files.
 - State ownership and vocabulary: who owns gated actions ("write the migration, do NOT push"), the exact enums they'll write.
 - **jj**: point at `arbe-jj-jujutsu`, binding. Commit only your own files, don't reshape history, report repairs instead of making them.
 - **Commit outcomes, not agent footsteps.** One builder run → one implementation commit (code, task close, changelog). Mid-batch, leave same-domain tracker bookkeeping for your final integration commit; once the batch is idle, squash same-domain fragments into the smallest reviewable set. Never rewrite history while workers are active.
 - **Files every worker must touch, own yourself** (changelog, a tracker with concurrent-write bugs): "do not add a changelog entry, do not run task update/close — I do both as your work lands."
+- **Test runs: only the touched files, from the package directory.** Workers default to the whole package suite after every edit; on a shared copy that is minutes per run, and they pad it with `sleep` and 600s timeouts. Brief `cd <package> && bun run test <file>` and one scoped check before commit; never a backgrounded run. From the repo root a file path fans out to every workspace and reads as a failure ("No test files found") — a fake blocker.
 - On a shared copy, repo-wide checks go red under a worker from others' uncommitted edits. Say so: red outside your fileset is expected, verify with scoped checks and commit your own files; repo-green re-verification waits for the tree to settle.
-- **Blockers: one line and stop** — dead key, dead server, missing auth. Same for your own fences: a scope rule blocking the right fix gets reported, not detoured around.
+- **Blockers: one line and stop** — dead key, dead server, missing auth. Say explicitly that a stopped shared service (a Fly machine, the backstage, the dev server) is a blocker to report, never to start: a glm worker found the backstage machine stopped and started it to finish its probe (2026-09-02). Same for your own fences: a scope rule blocking the right fix gets reported, not detoured around.
 - pi subagents route independently of their parent and die on 402s/expired OAuth as fake blockers — tell the worker to use its own model and not fan out.
 - **Require a written closing report — silence is indistinguishable from success.** State both contracts verbatim:
 
@@ -136,6 +138,7 @@ Steering:
 
 The review is what makes a cheap implementer safe, so it's the half not to skip: a strong model reviews every non-trivial diff, never the author. Review design and compactness, not just correctness — ask for cleaner rework instead of accepting sprawl.
 
+- **A reviewer's FIX is a finding, not an order.** Weigh each one against the system before relaying it: a technically-true note ("a contended wake never reaches the last-attempt reconcile") became two fix rounds and a loop before anyone asked whether the holder already covered it (2026-09-02). Relay the ones that change an outcome a user would see; answer the rest in the re-review prompt.
 - **"Checks pass" is not evidence — ask for the pasted output.** Workers report from memory or from a scoped run before their last edits. Classic shape: a new union variant that updates the producer but not every consumer — name the consumers in the brief when you can see them.
 - A regex over source is evidence of nothing; one "unused import" scan nearly deleted a live import used at 11 sites. Use the language's own tooling, or brief a worker to.
 - A fix's own tests can encode the bug as intended behavior. Verify with a fresh pane and a stronger model, against the original review's attack scenarios.
@@ -157,11 +160,11 @@ herdr agent prompt <name> "/new" --wait --timeout 15000
 ```
 
 - Same task or direct follow-up: keep context. Unrelated self-contained task: `/new` first. Rejected design or drift: `/new` — don't let it defend stale work. Isolation part of the proof (benchmarks, session-state tests): genuinely fresh agent.
-- pi degrades past ~200–250k tokens (statusline `X%/272k`). Near the ceiling, `/new` plus a fresh brief beats steering the warm session.
+- most LLMs get less intelligent past ~200–250k tokens (statusline `X%/272k`), and claude workers hit the same. Near the ceiling, `/new` plus a fresh brief beats steering the warm session; watch reviewers especially, since repeated rounds pile up quietly.
 - Drift looks like abandoning the brief for side questions. Prompt an exit: "stop investigating, post your report with what you verified, then you are done." Anything real it surfaced is yours to chase in fresh context.
 - `/new` returns `agent_prompt_stalled` — slash commands finish instantly, so herdr sees no state change; confirm with `agent read`. It also resets pi's thinking level to the start args.
 - **Close panes you created** once their work is committed and reviewed (`pane close <pane-id>`; leave the human's and other orchestrators'). Lingering settled panes crowd the tab and read as live workers to the next orchestrator.
 
 ---
 
-Living doc, with a growth cap: fold a learning in as a one-line rule, deduped against what's already here — keep incident detail only when the rule is unbelievable without it. Recovery procedures and per-provider failure modes go in `references/troubleshooting.md`, pure CLI mechanics in `herdr --skill`, volatile model ids only in §1's table.
+Living doc, with a growth cap: fold a learning in as a one-line rule, deduped against what's already here — keep incident detail only when the rule is unbelievable without it. Recovery procedures and per-provider failure modes go in `references/troubleshooting.md`, pure CLI mechanics in `herdr --skill`, volatile model ids only in §1's table. The less we have in this file, the better.
