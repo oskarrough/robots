@@ -17,12 +17,13 @@ Recovery procedures for things that have already gone wrong. Read when a herdr c
 
 ## Workers that settle wrong
 
-SKILL.md §3 has the general rule: `done` with no assistant text is not a completion. Two providers fail that way for reasons worth naming.
+SKILL.md §3 has the general rule: `done` with no assistant text is not a completion.
 
+- `[ours]` **OpenRouter `Provider finish_reason: error`** can end a turn while preserving the session. Prompt “continue, that was a transient provider error” once; recurring failures call for a different model or a smaller brief.
 - `[ours]` **`Codex error: The usage limit has been reached`** settles as `done` ~15s after briefing with nothing done — a fast `done` on a big slice is the tell. Rebuild with a different model and tell the human their sub quota is out.
 - `[ours]` **A prompt sent while pi is self-compacting is silently eaten** — if `agent_status` never leaves idle, read the pane and re-send. "Queued message for after compaction" fires on its own; don't re-send that, and don't `esc` a compaction near the finish line.
 - `[ours]` **`agent wait --until done` fired at submit time** — a follow-up prompt to a warm pi worker can return `done` within seconds while the worker is still working (the old `done` from its previous turn). Sleep ~25s after `agent prompt` before arming the wait, and treat a fast `done` on a fix round as suspect: read the pane for a spinner.
-- `[ours]` **glm-5.3-flash hangs with zero token movement** — statusline `↑Nk` frozen for minutes, `esc` does nothing, queued steering never consumed. If `jj st` shows nothing written for its task, close the pane and restart; a fix round that spans a reducer used by several packages is the shape that hung, and it is sol's job, not glm's (2026-09-02, arbe-18c3).
+- `[ours]` **glm-5.3-flash hangs with zero token movement** — statusline `↑Nk` frozen for minutes, `esc` does nothing, queued steering never consumed. If `jj st` shows nothing written for its task, close the pane and restart; split a repeatedly failing cross-package brief or escalate to a stronger implementer.
 - `[ours]` **Switching a pi model mid-session is unreliable** — `/model` opens a picker the full `id:level` string doesn't match. If the model matters, rebuild the pane with the right start args. Claude Code takes `/model opus` directly.
 
 ## Reading a pane that won't read
