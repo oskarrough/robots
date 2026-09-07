@@ -9,6 +9,16 @@ description: Use for any version-control or git command — we use jj (jujutsu) 
 
 We interact with git using `jj` (jujutsu). Use `--help` to learn flags.
 
+## The one rule that prevents hangs
+
+**`describe`, `commit`, `squash`, `split` always carry `-m "msg"` (or `-u` on squash). Never `-i`/`--interactive`.**
+
+Without a message jj opens `$EDITOR` and waits for a human who isn't there. There is no error, no timeout, no output — the shell just sits (24 minutes in one real case). jj never pages when stdout is a pipe, so **a hanging jj command is always the editor, never the pager**; `--no-pager` and `| cat` don't fix it. Kill it, rerun with `-m`/`-u`.
+
+- `-m "msg"` — set the message inline.
+- `-u` / `--use-destination-message` — `squash` only: keep the target's message, drop the source's. Use it for every fixup-into-existing-commit squash; when both revisions are described and you pass neither `-m` nor `-u`, jj opens the editor to merge the two messages.
+- `-i`, bare `split`, bare `commit`, bare `describe` — editor or hunk picker, always. No flag rescues them.
+
 ## Mental model
 
 No staging area — the working copy IS the current change. `@` = current, `@-` = parent. Every command auto-snapshots. One change per task; `jj commit` to close.
@@ -55,7 +65,7 @@ Unmatched paths are dropped **without error** — `commit`/`squash`/`split`/`res
 
 **Same failure mode, no globs needed: wrong directory level.** A plain path that doesn't exist also matches nothing and is dropped silently. If a commit's stat check comes back missing a file you named, check the real path with `jj file list <dir>/` before trusting a remembered path — repo conventions sometimes nest a level deeper than the doc says.
 
-**`-m "msg"` before `--`, never after.** Everything after `--` parses as filesets, so a trailing `-m` becomes a fileset arg (parse error or silent editor fallback); bare `commit`/`split` opens an editor too — both hang non-interactive shells. Always `jj commit -m "msg" -- f1 f2`.
+**`-m "msg"` before `--`, never after.** Everything after `--` parses as filesets, so a trailing `-m` becomes a fileset arg and jj falls back to the editor — the hang from the top of this doc. Always `jj commit -m "msg" -- f1 f2`.
 
 **MANDATORY after every `jj commit -- <files>`: `jj diff -r @- --stat`, check the file list is what you meant.** A typo'd or unmatched path produces a partial or empty commit that reports success (has shipped commits missing their key file twice). Stranded files stay in the new `@` — fix with another `jj commit` or `jj squash --into @-`.
 
@@ -63,10 +73,10 @@ Unmatched paths are dropped **without error** — `commit`/`squash`/`split`/`res
 
 **Never `jj restore` to clean up a mixed working copy.** Parallel agents' in-flight edits get auto-snapshotted into *your* `@`; `jj restore --from @- --to @ <files>` rewrites those files to the committed state, silently destroying their uncommitted work. Use `jj commit -- <your-files>` instead — everything else stays on the fresh `@`. `restore` is only safe on files you alone touched, to throw away your *own* edits.
 
-**`commit` vs `split`** — `commit` closes `@`, leftovers become the new `@`. `split` restructures any revision into two (`-r <id>`, description copied to both halves) but always opens an editor, even with paths — so use `commit` in non-interactive shells. Check `jj st` before `commit -m`: if `@` carries a parallel agent's description, your `-m` overwrites it. Don't interrogate the user file-by-file — propose a split (theirs vs. yours, based on what *you* touched this session) and ask y/n. If you didn't edit anything, say so; the answer is probably "commit it all as theirs, `jj new` for me".
+**`commit` vs `split`** — `commit` closes `@`, leftovers become the new `@`. `split` restructures any revision into two (`-r <id>`, `-m` names the split-off half; the remainder keeps the original description). Without `-m` it opens an editor even with paths, so pass it. Check `jj st` before `commit -m`: if `@` carries a parallel agent's description, your `-m` overwrites it. Don't interrogate the user file-by-file — propose a split (theirs vs. yours, based on what *you* touched this session) and ask y/n. If you didn't edit anything, say so; the answer is probably "commit it all as theirs, `jj new` for me".
 
 ```sh
-jj split -r <id> -- <files>                # split files out of a revision
+jj split -r <id> -m "msg" -- <files>       # split files out of a revision (-m or it opens an editor)
 jj squash --from <A> --into <B> -- <files> # route files between any two revisions
 ```
 
@@ -83,16 +93,16 @@ Use when ~10 session commits should become 1–2. **Only squash committed revisi
 
 ### Hang triggers (non-interactive shells)
 
-These look like hangs; they are usually **waiting for an editor or a prompt**:
+A stalled jj command is waiting for an editor (see the rule at the top), not working:
 
-| Command | Why it stalls |
-|---------|----------------|
-| `jj squash --from A --into B` (no message flags) | Both sides have descriptions → jj opens an editor for the combined message |
-| `jj squash -i` / `--interactive` | Hunk picker |
-| `jj split` (even with paths) | Always opens an editor |
-| `jj rebase -s 'A::B' -o C` on a chain that touched the same files | Conflicts; fix/undo loops feel endless |
+| Command | Why it stalls | Fix |
+|---------|----------------|-----|
+| `jj squash --from A --into B` with both sides described | Editor opens to merge the two messages | `-u` (keep B's message) or `-m` |
+| `jj squash -i` / `--interactive` | Hunk picker | Pass paths after `--` instead |
+| `jj split` / `jj commit` / `jj describe` without `-m` | Editor | `-m "..."` |
+| `jj rebase -s 'A::B' -o C` on a chain that touched the same files | Not a hang: conflicts, and fix/undo loops feel endless | `jj undo`, squash instead |
 
-**Fix:** pass `-m "..."`, or **`--use-destination-message`** (`-u`) on every squash where both revisions are described. Set the final subject once with `jj describe -r <id> -m "..."` at the end.
+Set the final subject once with `jj describe -r <id> -m "..."` at the end.
 
 ### Don'ts
 
