@@ -13,7 +13,7 @@ Default: start, brief, watch, review, return the result. For an explicit launch-
 
 ## Fast path: `herdr-delegate`
 
-When installed, use the wrapper for one fresh worker:
+`herdr-delegate` is installed in this environment. Use it for one fresh worker; do not probe whether it exists or default to manual setup:
 
 ```sh
 herdr-delegate <name> '<prompt>' --kind pi --timeout 60000 -- --provider openrouter --model <model> --thinking high
