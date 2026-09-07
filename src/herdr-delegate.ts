@@ -73,11 +73,20 @@ export function parseHerdrDelegateArguments(argv: string[], defaultCwd = process
   return { name: positionals[0]!, prompt: positionals[1]!, kind, direction, cwd, tab, workspace, startTimeoutMs, timeoutMs, lines, nativeArgs };
 }
 
+const activeHerdrChildren = new Set<{ kill: () => void }>();
+/** Kills every Herdr call still in flight, so an early `--any` resolve does not outlive its waits. */
+function stopActiveHerdrChildren(): void {
+  for (const child of activeHerdrChildren) try { child.kill(); } catch {}
+}
+
 async function captureHerdr(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
     const child = Bun.spawn([process.env.HERDR_BIN_PATH ?? "herdr", ...args], { env: process.env, stdout: "pipe", stderr: "pipe" });
-    const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
-    return { stdout, stderr, code };
+    activeHerdrChildren.add(child);
+    try {
+      const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+      return { stdout, stderr, code };
+    } finally { activeHerdrChildren.delete(child); }
   } catch (error) {
     throw new HerdrDelegateError({ code: "herdr_delegate_spawn_failed", message: String(error) });
   }
@@ -395,13 +404,178 @@ export async function runFreshDelegatePipeline(command: DelegateCommand): Promis
   return { ok: true, created: true, agent: handles, runtime, prompt, terminal_text: terminalText };
 }
 
+type WaitMode = "any" | "all";
+type WaitCommand = { names: string[]; timeoutMs?: number; lines: number; confirmIntervalMs: number; mode: WaitMode };
+type WaitClassification = "never_ran" | "blocked" | "report";
+type SettledAgent = { name: string; status: string | null; classification: WaitClassification; terminal_text: string };
+type WatchOutcome = { kind: "settled"; settled: SettledAgent } | { kind: "timed_out" } | { kind: "running" };
+type Observation = { status: string | null; text: string };
+type Cancellation = { cancelled: boolean; cancel: () => void; sleep: (ms: number) => Promise<void> };
+
+const waitUsage = "herdr-delegate wait NAME [NAME...] [--timeout MS] [--lines N] [--confirm-interval MS] [--any|--all]";
+const HERDR_DELEGATE_SETTLED_STATUSES = new Set(["idle", "done", "blocked"]);
+const HERDR_DELEGATE_CONFIRM_INTERVAL_MS = 20_000;
+const HERDR_DELEGATE_REARM_PAUSE_MS = 1_000;
+/** A pane still painting one of these is working, whatever lifecycle status Herdr reports. */
+const HERDR_DELEGATE_ACTIVITY_MARKERS = [/[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/, /Working\.\.\./, /esc to interrupt/, /^\s*[✻*●]?\s*[A-Z][a-z]+… \(/m, /\d+ shell/, /new message/];
+
+/** Parses the wait subcommand: agent names first, then options. */
+export function parseHerdrWaitArguments(argv: string[]): WaitCommand {
+  const names: string[] = [];
+  let index = 0;
+  while (index < argv.length && !argv[index]!.startsWith("--")) names.push(argv[index++]!);
+  let timeoutMs: number | undefined, lines = 120, confirmIntervalMs = HERDR_DELEGATE_CONFIRM_INTERVAL_MS, mode: WaitMode = "any";
+  while (index < argv.length) {
+    const argument = argv[index]!;
+    if (argument === "--any" || argument === "--all") { mode = argument.slice(2) as WaitMode; index += 1; continue; }
+    const [flag, value, consumed] = splitOption(argument, argv[index + 1]);
+    index += consumed;
+    if (flag === "--timeout") timeoutMs = parseSafeInteger(flag, value);
+    else if (flag === "--confirm-interval") confirmIntervalMs = parseSafeInteger(flag, value);
+    else if (flag === "--lines") {
+      lines = parseSafeInteger(flag, value);
+      if (lines > HERDR_DELEGATE_MAX_READ_LINES) throw new HerdrDelegateUsageError(`--lines must be at most ${HERDR_DELEGATE_MAX_READ_LINES}`);
+      if (lines === 0) throw new HerdrDelegateUsageError("--lines must be at least 1");
+    } else throw new HerdrDelegateUsageError(`Invalid option: ${flag}`);
+  }
+  if (names.length === 0 || names.some((name) => name === "")) throw new HerdrDelegateUsageError(`Missing NAME\n${waitUsage}`);
+  return { names: [...new Set(names)], timeoutMs, lines, confirmIntervalMs, mode };
+}
+
+function createCancellation(): Cancellation {
+  const listeners = new Set<() => void>();
+  const token: Cancellation = {
+    cancelled: false,
+    cancel() {
+      if (token.cancelled) return;
+      token.cancelled = true;
+      for (const listener of listeners) listener();
+      listeners.clear();
+      stopActiveHerdrChildren();
+    },
+    sleep(ms) {
+      return new Promise<void>((resolve) => {
+        if (token.cancelled || ms <= 0) return resolve();
+        const listener = () => { clearTimeout(timer); resolve(); };
+        const timer = setTimeout(() => { listeners.delete(listener); resolve(); }, ms);
+        listeners.add(listener);
+      });
+    },
+  };
+  return token;
+}
+
+const hasActivityMarker = (text: string): boolean => HERDR_DELEGATE_ACTIVITY_MARKERS.some((marker) => marker.test(text));
+const isSettledObservation = (observation: Observation): boolean =>
+  (observation.status === null || HERDR_DELEGATE_SETTLED_STATUSES.has(observation.status)) && !hasActivityMarker(observation.text);
+function classifySettledAgent(observation: Observation): WaitClassification {
+  if (/0\.0%\//.test(observation.text)) return "never_ran";
+  if (observation.status === "blocked" || /^\s*ORCHESTRATOR:/m.test(observation.text)) return "blocked";
+  return "report";
+}
+function lastLines(text: string, lines: number): string {
+  const trailing = text.endsWith("\n") ? "\n" : "";
+  const rows = (trailing ? text.slice(0, -1) : text).split("\n");
+  return rows.length <= lines ? text : rows.slice(rows.length - lines).join("\n") + trailing;
+}
+/** Reads status and visible pane text together; a vanished agent observes as a null status. */
+async function observeAgent(name: string, lines: number): Promise<Observation> {
+  let status: string | null = null, text = "";
+  try {
+    const agent = decodeAgentValue(await callHerdrJson(["agent", "get", name]), "agent get");
+    if (typeof agent.agent_status === "string") status = agent.agent_status;
+  } catch {}
+  try { text = await readAgentTerminal(name, lines); } catch {}
+  return { status, text };
+}
+
+/** Re-arms `agent wait` until the pane both reports a settled status and stops painting activity. */
+async function watchAgent(name: string, command: WaitCommand, deadline: number | null, token: Cancellation): Promise<WatchOutcome> {
+  while (!token.cancelled) {
+    const remaining = deadline === null ? null : deadline - Date.now();
+    if (remaining !== null && remaining <= 0) return { kind: "timed_out" };
+    const args = ["agent", "wait", name, "--until", "done", "--until", "blocked"];
+    if (remaining !== null) args.push("--timeout", String(remaining));
+    try { await callHerdrJson(args); }
+    catch (error) {
+      if (token.cancelled) break;
+      const code = errorCode(error);
+      if (code === "timeout") return { kind: "timed_out" };
+      if (code !== "agent_not_running") throw error;
+    }
+    if (token.cancelled) break;
+    const observation = await observeAgent(name, command.lines);
+    if (token.cancelled) break;
+    if (!isSettledObservation(observation)) { await token.sleep(Math.min(command.confirmIntervalMs, HERDR_DELEGATE_REARM_PAUSE_MS)); continue; }
+    await token.sleep(command.confirmIntervalMs);
+    if (token.cancelled) break;
+    const confirmation = await observeAgent(name, command.lines);
+    if (token.cancelled) break;
+    if (!isSettledObservation(confirmation)) continue;
+    return { kind: "settled", settled: { name, status: confirmation.status, classification: classifySettledAgent(confirmation), terminal_text: lastLines(confirmation.text, command.lines) } };
+  }
+  return { kind: "running" };
+}
+
+function collectWaitOutcomes(names: string[], outcomes: Map<string, WatchOutcome>): { settled: SettledAgent[]; running: string[]; timed_out: string[] } {
+  const settled: SettledAgent[] = [], running: string[] = [], timedOut: string[] = [];
+  for (const name of names) {
+    const outcome = outcomes.get(name);
+    if (outcome?.kind === "settled") settled.push(outcome.settled);
+    else if (outcome?.kind === "timed_out") timedOut.push(name);
+    else running.push(name);
+  }
+  return { settled, running, timed_out: timedOut };
+}
+function waitFailure(stage: string, upstream: JsonObject, outcomes: { settled: SettledAgent[]; running: string[]; timed_out: string[] } = { settled: [], running: [], timed_out: [] }, extra: JsonObject = {}): JsonObject {
+  return { ok: false, stage, upstream_herdr_error: upstream, ...extra, ...outcomes };
+}
+async function precheckWaitNames(names: string[]): Promise<JsonObject | null> {
+  const missing: string[] = [];
+  for (const name of names) {
+    try { await callHerdrJson(["agent", "get", name]); }
+    catch (error) {
+      if (errorCode(error) !== "agent_not_found") return waitFailure("precheck", asDelegateError(error).upstream);
+      missing.push(name);
+    }
+  }
+  if (missing.length === 0) return null;
+  return waitFailure("precheck", { code: "herdr_delegate_agent_not_found", message: `No live agent named ${missing.join(", ")}`, names: missing }, undefined, { missing });
+}
+
+/** Waits for real settles across named agents and emits one envelope for all of them. */
+export async function runHerdrWaitPipeline(command: WaitCommand): Promise<JsonObject> {
+  const precheckFailure = await precheckWaitNames(command.names);
+  if (precheckFailure) return precheckFailure;
+  const deadline = command.timeoutMs === undefined ? null : Date.now() + command.timeoutMs;
+  const token = createCancellation(), outcomes = new Map<string, WatchOutcome>();
+  try {
+    await Promise.all(command.names.map(async (name) => {
+      const outcome = await watchAgent(name, command, deadline, token);
+      outcomes.set(name, outcome);
+      if (command.mode === "any" && outcome.kind === "settled") token.cancel();
+    }));
+  } catch (error) {
+    token.cancel();
+    return waitFailure("wait", asDelegateError(error).upstream, collectWaitOutcomes(command.names, outcomes));
+  } finally { token.cancel(); }
+  const collected = collectWaitOutcomes(command.names, outcomes);
+  const ok = command.mode === "any" ? collected.settled.length > 0 : collected.settled.length === command.names.length;
+  return { ok, stage: "wait", ...collected };
+}
+
 /** Emits one public JSON envelope and returns its process exit code. */
 export async function herdrDelegateMain(argv = process.argv.slice(2)): Promise<number> {
+  const waiting = argv[0] === "wait";
   let output: JsonObject;
-  if (process.env.HERDR_ENV !== "1") output = { ok: false, created: false, stage: "environment", upstream_herdr_error: { code: "herdr_delegate_environment_required", message: "HERDR_ENV=1 is required" }, cleanup: noCleanup("no_pane_created") };
-  else try { output = await runFreshDelegatePipeline(parseHerdrDelegateArguments(argv)); }
+  if (process.env.HERDR_ENV !== "1") {
+    const upstream = { code: "herdr_delegate_environment_required", message: "HERDR_ENV=1 is required" };
+    output = waiting ? waitFailure("environment", upstream) : { ok: false, created: false, stage: "environment", upstream_herdr_error: upstream, cleanup: noCleanup("no_pane_created") };
+  }
+  else try { output = waiting ? await runHerdrWaitPipeline(parseHerdrWaitArguments(argv.slice(1))) : await runFreshDelegatePipeline(parseHerdrDelegateArguments(argv)); }
   catch (error) {
-    output = { ok: false, created: false, stage: "arguments", upstream_herdr_error: { code: "herdr_delegate_usage_error", message: error instanceof Error ? error.message : String(error) }, cleanup: noCleanup("no_pane_created") };
+    const upstream = { code: "herdr_delegate_usage_error", message: error instanceof Error ? error.message : String(error) };
+    output = waiting ? waitFailure("arguments", upstream) : { ok: false, created: false, stage: "arguments", upstream_herdr_error: upstream, cleanup: noCleanup("no_pane_created") };
   }
   process.stdout.write(`${JSON.stringify(output)}\n`);
   return output.ok === true ? 0 : 1;

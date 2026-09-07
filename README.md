@@ -42,6 +42,15 @@ blocked agents, failed placement, and ambiguous starts remain available for
 inspection. A failed start closes its pane only after `agent get` confirms that
 the named agent does not own it.
 
+`herdr-delegate wait NAME [NAME...] [--timeout MS] [--lines N]
+[--confirm-interval MS] [--any|--all]` waits for real settles: it prechecks
+each name, then re-arms `agent wait` for as long as the pane still paints a
+spinner, `Working...`, `esc to interrupt`, a Claude `Verbing… (` line, `N
+shell`, or `new message`, and confirms once more 20 seconds later. It writes
+`{ok, stage, settled: [{name, status, classification, terminal_text}], running,
+timed_out}`, where `classification` is `never_ran`, `blocked`, or `report`.
+`--any` (default) returns on the first settle; `--all` waits for every name.
+
 AGENTS
 ---------------
 
