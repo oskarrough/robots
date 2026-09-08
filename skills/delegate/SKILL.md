@@ -25,11 +25,12 @@ Use manual commands for a crew, placement, or steering. Warm workers take `herdr
 
 ## 1. Pick and place workers
 
-Use cheap implementers with strong direction and independent review. Escalate or split a repeatedly failing brief. Current preferences are volatile: ask Oskar before assuming free capacity or reintroducing benched models (terra, haiku, deepseek).
+Use cheap implementers with strong direction and independent review. Escalate or split a repeatedly failing brief. Current preferences are volatile: ask Oskar before assuming free capacity or reintroducing benched models (terra, haiku).
 
 | work | preference |
 | --- | --- |
-| scouting, smoke tests, ordinary implementation | `z-ai/glm-5.3-flash`, pi with `--provider openrouter`; keep briefs tight. Alternatives: `gpt-5.6-luna` on the Codex sub, `cursor-grok-4.6-high` through cursor. |
+| ordinary implementation | `deepseek/deepseek-v4.1-flash-beta`, pi with `--provider vercel-ai-gateway` (back 2026-09-10; one model replaces the old v4 flash-0731 and pro-0813, per token). Alternative: `z-ai/glm-5.3-flash` on openrouter. |
+| scouting, smoke tests | `z-ai/glm-5.3-flash`, pi with `--provider openrouter`; keep briefs tight. Alternatives: `gpt-5.6-luna` on the Codex sub, `cursor-grok-4.6-high` through cursor. |
 | hard planning and implementation; review of migrations, dispatch, retry/error contracts | `gpt-5.6-sol`, pi with `--provider openai-codex`; `--thinking medium` for ordinary implementation, `high` for hard work. Sol review is required for these sensitive contracts. |
 | UI design, hard thinking, adversarial review | Opus 5 through claude: `--model opus --effort high`; `xhigh` for hard implementation or adversarial review. |
 
@@ -37,6 +38,7 @@ Prefer explicit pi `--provider`, `--model`, and `--thinking` arguments; verify r
 
 ```sh
 herdr agent start <name> --kind pi --pane <pane-id> -- --provider openai-codex --model <model> --thinking high
+herdr agent start <name> --kind pi --pane <pane-id> -- --provider vercel-ai-gateway --model deepseek/deepseek-v4.1-flash-beta --thinking high
 herdr agent start <name> --kind claude --pane <pane-id> -- --model opus --effort high
 herdr agent start <name> --kind cursor --pane <pane-id> -- --model <model>
 ```
