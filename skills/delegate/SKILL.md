@@ -13,39 +13,37 @@ Default: start, brief, watch, review, return the result. For an explicit launch-
 
 ## Fast path: `herdr-delegate`
 
-`herdr-delegate` is installed in this environment. Use it for one fresh worker; do not probe whether it exists or default to manual setup:
+`herdr-delegate` is installed in this environment. Use it for one fresh worker — it replaces the split/start/verify/prompt/wait/read sequence with one command; do not probe whether it exists or default to manual setup:
 
 ```sh
 herdr-delegate <name> '<prompt>' --kind pi --timeout 60000 -- --provider openrouter --model <model> --thinking high
 ```
 
-It splits, starts, verifies runtime, prompts, waits, and reads; NAME and PROMPT are required. The JSON envelope carries handles, runtime, and `terminal_text`. `ok` does not prove useful work happened — apply §3. On failure inspect `stage`, `upstream_herdr_error`, and `cleanup`. Never move a pane during its live wait; that can break the wait while the worker continues.
+NAME and PROMPT are required; `--workspace <id>` or `--tab <id>` places the pane. The JSON envelope carries handles, runtime, and `terminal_text`. It verifies the resolved provider/model/thinking against what you requested (pi and claude) and fails with `herdr_delegate_runtime_mismatch` on a wrong runtime, and it appends both §2 contracts to every prompt. `ok` does not prove useful work happened — apply §3. On failure inspect `stage`, `upstream_herdr_error`, and `cleanup`. Never move a pane during its live wait; that can break the wait while the worker continues.
 
-Use manual commands for a crew, placement, or steering. Warm workers take `herdr agent prompt <name> '<prompt>'`; reset unrelated context first (§5).
+Use manual commands for a crew or for steering. Warm workers take `herdr agent prompt <name> '<prompt>'`; reset unrelated context first (§5).
 
 ## 1. Pick and place workers
 
-Use cheap implementers with strong direction and independent review. Escalate or split a repeatedly failing brief. Current preferences are volatile: ask Oskar before assuming free capacity or reintroducing benched models (terra, haiku).
+Use cheap implementers with strong direction and independent review. Escalate or split a repeatedly failing brief. Stick to the models below — they cover the range; benched models (terra, haiku) stay benched unless Oskar says otherwise.
 
 | work | preference |
 | --- | --- |
 | ordinary implementation | `deepseek/deepseek-v4.1-flash-beta`, pi with `--provider vercel-ai-gateway` (back 2026-09-10; one model replaces the old v4 flash-0731 and pro-0813, per token). Alternative: `z-ai/glm-5.3-flash` on openrouter. |
-| scouting, smoke tests | `z-ai/glm-5.3-flash`, pi with `--provider openrouter`; keep briefs tight. Alternatives: `gpt-5.6-luna` on the Codex sub, `cursor-grok-4.6-high` through cursor. |
-| hard planning and implementation; review of migrations, dispatch, retry/error contracts | `gpt-5.6-sol`, pi with `--provider openai-codex`; `--thinking medium` for ordinary implementation, `high` for hard work. Sol review is required for these sensitive contracts. |
-| UI design, hard thinking, adversarial review | Opus 5 through claude: `--model opus --effort high`; `xhigh` for hard implementation or adversarial review. |
+| scouting, smoke tests | `z-ai/glm-5.3-flash` or `google/gemini-3.8-flash`, pi with `--provider openrouter`; keep briefs tight. Alternatives: `gpt-5.6-luna` on the Codex sub, `cursor-grok-4.6-high` through cursor. |
+| hard planning and implementation; review of migrations, dispatch, retry/error contracts | top tier: GPT Astra (`gpt-6-astra`) and GPT 5.6 (`gpt-5.6-sol`), both pi with `--provider openai-codex`; Fable 5.1 through claude (`--model fable`). `--thinking medium` for ordinary implementation, `high` for hard work. Opus 5 at `--effort high` is fine on the Claude sub, but 5.6 wins whenever the Codex sub is available — except design tasks. |
+| UI and design tasks, adversarial review | Opus 5 through claude: `--model opus --effort high`; `xhigh` for hard implementation or adversarial review. |
 
-Prefer explicit pi `--provider`, `--model`, and `--thinking` arguments; verify resolved values before briefing. Codex subscription routing is `openai-codex`, with `(openai-codex)` and `$x.xxx (sub)` in the statusline; `openai` bills per token. Use claude for Anthropic capacity. Cursor effort lives in its model ID; avoid costly `-fast` variants. Default worker thinking ceiling is `high`; cheap models can loop at higher levels.
+`openai-codex` routes to the Codex subscription; `openai` bills per token. Use claude for Anthropic capacity. Cursor effort lives in its model ID; avoid costly `-fast` variants. Default worker thinking ceiling is `high`; cheap models can loop at higher levels.
+
+Manual start, when the wrapper doesn't fit (crews, custom placement):
 
 ```sh
-herdr agent start <name> --kind pi --pane <pane-id> -- --provider openai-codex --model <model> --thinking high
-herdr agent start <name> --kind pi --pane <pane-id> -- --provider vercel-ai-gateway --model deepseek/deepseek-v4.1-flash-beta --thinking high
-herdr agent start <name> --kind claude --pane <pane-id> -- --model opus --effort high
-herdr agent start <name> --kind cursor --pane <pane-id> -- --model <model>
+herdr agent start <name> --kind pi --pane <pane-id> -- --provider <provider> --model <model> --thinking <level>
 ```
 
 - Check `agent list` first. Give every agent a unique job name, at most three plain words (`review-secrets`); address agents by registered name, never pane ID. An unregistered target is unreachable — don't guess a fallback. Name non-agent panes with `pane rename`.
-- Split with `pane split --current` or an explicit pane ID; an omitted target follows UI focus. Split and start in the current tab, then move into a labelled worker tab. Panes created inside a `tab create --no-focus` tab can fail to start.
-- Keep workers out of the human's tab. Pass `--workspace <id>` to `tab create`, then `pane move <pane> --tab <tab> --split right --target-pane <sibling>`. Limit each tab to four workers so panes remain readable.
+- Keep workers out of the human's tab; limit each tab to four workers so panes remain readable. Pane and tab mechanics: [placement](references/placement.md).
 - For ongoing batches, reuse a crew of roughly four warm workers. Feed small tasks, fence ownership on every dispatch, and reset unrelated context. Start fresh for a different runtime, required isolation, or unrecoverable drift.
 - Parallelize disjoint files. Give cascading deletion sweeps one owner; shared dependencies can make separate directories conflict.
 
@@ -65,7 +63,7 @@ Include what applies:
 - **Blockers:** report missing auth, stopped shared services, or scope conflicts; don't start services or work around boundaries just to finish a probe. Tell pi workers to use their own model rather than fan out through independently billed subagents.
 - **Report:** plain language, at most ten lines in the pane: outcome, files/commits, checks and results, remaining blockers. Long measurements go in a file; don't ask workers to commit their report.
 
-State both contracts:
+State both contracts (the `herdr-delegate` wrapper appends them automatically; include them yourself on manual or warm `agent prompt` dispatches):
 
 > To ask the orchestrator anything or report a blocker: stop, print one final line starting with `ORCHESTRATOR: <question or blocker>`, and end your turn. Your settled pane is the message. Do not look for another channel or work around the question.
 
@@ -91,7 +89,7 @@ herdr agent wait <name> --until done --until blocked   # run detached
 
 Handle `blocked` promptly. Verify the prompt landed: a fresh pane still at `0.0%` context may never have started. Read the pane before resending once; never blindly repeat a timed-out prompt. Don't add fixed startup sleeps — herdr waits for readiness.
 
-A settled status is a claim. Check `pane read <pane> --source visible` for activity as well: require idle/done status and no spinner or `Working...` / `esc to interrupt`, twice 20 seconds apart. Lifecycle signals can reflect the previous turn or flap between tools.
+A settled status is a claim. Check `pane read <pane> --source visible` for activity as well: require idle/done status and no spinner or `Working...` / `esc to interrupt`. Lifecycle signals can reflect the previous turn or flap between tools.
 
 Then inspect visible assistant text and the repository:
 
@@ -107,7 +105,7 @@ Use `STEERING:` for a scope correction. For drift, interrupt and request a short
 
 ## 4. Review
 
-A strong reviewer, independent of the author, reviews every non-trivial diff for correctness, design, and compactness. Weigh findings against actual behavior before relaying fixes; answer rejected findings in the re-review prompt.
+A reviewer independent of the author checks non-trivial diffs for correctness, design, and compactness; any strong model from §1 works — scale reviewer strength and depth to risk, and skip formal review for trivial or throwaway diffs. Weigh findings against actual behavior before relaying fixes; answer rejected findings in the re-review prompt.
 
 - Require check output from the final edits. Probe what else uses the changed mechanism; tests written with the fix may encode the same mistaken assumption. Verify against the original failure and attack scenarios.
 - Use language tooling for claims like unused code. Spot-check important scout citations. A negative finding must state its search method, scope, and time window.
