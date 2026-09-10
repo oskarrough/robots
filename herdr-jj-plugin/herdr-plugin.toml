@@ -1,0 +1,18 @@
+id = "jj"
+name = "Jujutsu"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Show the current jj bookmark and change in the Herdr sidebar."
+platforms = ["linux", "macos"]
+
+# Seed every workspace once when the server starts.
+[[startup]]
+command = ["bun", "src/refresh.ts"]
+
+# Re-run by hand after doing jj work in a pane.
+[[actions]]
+id = "refresh"
+title = "Jujutsu: refresh sidebar"
+description = "Recompute jj bookmark and change for every workspace."
+contexts = ["global"]
+command = ["bun", "src/refresh.ts"]
