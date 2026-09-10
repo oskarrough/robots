@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { WORKER_CONTRACTS } from "./herdr-delegate.ts";
 
 const cliPath = join(import.meta.dir, "herdr-delegate.ts");
 const fakeHerdr = `#!/usr/bin/env bun
@@ -11,7 +12,8 @@ await appendFile(process.env.FAKE_HERDR_RECORD!, JSON.stringify(argv) + "\\n");
 const calls = (await readFile(process.env.FAKE_HERDR_RECORD!, "utf8")).trim().split("\\n").map((line) => JSON.parse(line));
 const name = process.env.FAKE_AGENT_NAME ?? argv[2] ?? "worker", kind = process.env.FAKE_AGENT_KIND ?? "pi", moved = calls.some((call) => call[0] === "pane" && call[1] === "move");
 const pane = (pane_id = "w4:p2", tab_id = "w4:t1", workspace_id = "w4") => ({ pane_id, tab_id, workspace_id });
-const agent = () => ({ name, agent: kind, ...(moved ? pane("wB:p3", "wB:t1", "wB") : pane()), agent_status: "done", ...(kind === "pi" && scenario !== "missing-session" ? { agent_session: { kind: "path", value: scenario === "unreadable-session" ? "/missing/session.jsonl" : process.env.FAKE_PI_SESSION_FILE } } : {}) });
+const claudeSession = process.env.FAKE_CLAUDE_SESSION_ID;
+const agent = () => ({ name, agent: kind, ...(moved ? pane("wB:p3", "wB:t1", "wB") : pane()), agent_status: "done", ...(kind === "pi" && scenario !== "missing-session" ? { agent_session: { kind: "path", value: scenario === "unreadable-session" ? "/missing/session.jsonl" : process.env.FAKE_PI_SESSION_FILE } } : kind === "claude" && claudeSession ? { agent_session: { kind: "id", value: claudeSession } } : {}) });
 function ok(result) { process.stdout.write(JSON.stringify({ id: "fake", result }) + "\\n"); process.exit(0); }
 function fail(code, message = code) { process.stderr.write(JSON.stringify({ id: "fake", error: { code, message } }) + "\\n"); process.exit(1); }
 function failPlain(message) { process.stderr.write(message + "\\n"); process.exit(2); }
@@ -60,10 +62,10 @@ beforeEach(async () => {
 });
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 
-async function runCli(args: string[], scenario = "success", herdrEnv = "1"): Promise<CliResult> {
+async function runCli(args: string[], scenario = "success", herdrEnv = "1", extraEnv: Record<string, string> = {}): Promise<CliResult> {
   const kindIndex = args.indexOf("--kind"), kind = kindIndex < 0 ? "pi" : args[kindIndex + 1]!;
   const child = Bun.spawn([process.execPath, cliPath, ...args], {
-    env: { ...process.env, HERDR_ENV: herdrEnv, HERDR_BIN_PATH: fakePath, FAKE_HERDR_RECORD: recordPath, FAKE_HERDR_SCENARIO: scenario, FAKE_AGENT_NAME: args[0] ?? "worker", FAKE_AGENT_KIND: kind, FAKE_PI_SESSION_FILE: sessionPath }, stdout: "pipe", stderr: "pipe",
+    env: { ...process.env, HERDR_ENV: herdrEnv, HERDR_BIN_PATH: fakePath, FAKE_HERDR_RECORD: recordPath, FAKE_HERDR_SCENARIO: scenario, FAKE_AGENT_NAME: args[0] ?? "worker", FAKE_AGENT_KIND: kind, FAKE_PI_SESSION_FILE: sessionPath, ...extraEnv }, stdout: "pipe", stderr: "pipe",
   });
   const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
   const records = (await readFile(recordPath, "utf8")).trim();
@@ -84,7 +86,7 @@ describe("herdr-delegate", () => {
       ["pane", "split", "--current", "--direction", "down", "--cwd", "/repo path", "--no-focus"],
       ["agent", "start", "builder", "--kind", "pi", "--pane", "w4:p2", "--timeout", "4567", "--", "--provider", "openai-codex", "--model", "gpt-5.6-sol", "--thinking", "medium"],
       ["agent", "get", "builder"],
-      ["agent", "prompt", "builder", "Do work", "--wait", "--timeout", "0"],
+      ["agent", "prompt", "builder", `Do work\n\n${WORKER_CONTRACTS}`, "--wait", "--timeout", "0"],
       ["agent", "read", "builder", "--source", "visible", "--lines", "42", "--format", "text"],
     ]);
     expect(result.output).toEqual({ ok: true, created: true, agent: { name: "builder", kind: "pi", pane_id: "w4:p2", tab_id: "w4:t1", workspace_id: "w4", status: "done" }, runtime: { requested: { provider: "openai-codex", model: "gpt-5.6-sol", reasoning_level: "medium" }, resolved: resolvedRuntime, verified: true, matches_requested: true }, prompt: { accepted: true, settled: "done" }, terminal_text: "raw terminal\nnot json {still raw}\n" });
@@ -122,6 +124,35 @@ describe("herdr-delegate", () => {
     const result = await runCli(["unknown", "Work", "--kind", "pi"], scenario);
     expect(result.code).toBe(0);
     expect(result.output.runtime).toEqual({ requested: { provider: null, model: null, reasoning_level: null }, resolved: { provider: null, model: null, reasoning_level: null, subscription_billed: null }, verified: false, matches_requested: null });
+  }, 15_000);
+
+  test("an explicit provider keeps a slashed openrouter model ID whole", async () => {
+    await writeFile(sessionPath, '{"type":"model_change","provider":"openrouter","modelId":"google/gemini-3.8-flash"}\n{"type":"thinking_level_change","thinkingLevel":"low"}\n');
+    const result = await runCli(["gemini", "Work", "--kind", "pi", "--", "--provider", "openrouter", "--model", "google/gemini-3.8-flash", "--thinking", "low"]);
+    expect(result.code).toBe(0);
+    expect(result.output.runtime).toEqual({ requested: { provider: "openrouter", model: "google/gemini-3.8-flash", reasoning_level: "low" }, resolved: { provider: "openrouter", model: "google/gemini-3.8-flash", reasoning_level: "low", subscription_billed: false }, verified: true, matches_requested: true });
+  });
+
+  async function writeClaudeSession(home: string, model: string): Promise<void> {
+    const projectDir = join(home, ".claude", "projects", process.cwd().replace(/[^A-Za-z0-9-]/g, "-"));
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(join(projectDir, "sess-1.jsonl"), `{"type":"user"}\n{"type":"assistant","message":{"model":"${model}"}}\n`);
+  }
+
+  test("claude resolves its model post-prompt and an alias matches the full ID", async () => {
+    await writeClaudeSession(directory, "claude-fable-5-1");
+    const result = await runCli(["fable-worker", "Work", "--kind", "claude", "--", "--model", "fable", "--effort", "low"], "success", "1", { HOME: directory, FAKE_CLAUDE_SESSION_ID: "sess-1" });
+    expect(result.code).toBe(0);
+    expect(result.output.runtime).toEqual({ requested: { provider: null, model: "fable", reasoning_level: "low" }, resolved: { provider: "anthropic", model: "claude-fable-5-1", reasoning_level: null, subscription_billed: null }, verified: true, matches_requested: true });
+  });
+
+  test("a claude model mismatch fails post-prompt but preserves the agent", async () => {
+    await writeClaudeSession(directory, "claude-fable-5-1");
+    const result = await runCli(["wrong-claude", "Work", "--kind", "claude", "--", "--model", "opus"], "success", "1", { HOME: directory, FAKE_CLAUDE_SESSION_ID: "sess-1" });
+    expect(result.code).toBe(1); expect(result.output.stage).toBe("verify"); expect(result.output.created).toBe(true);
+    expect(upstreamOf(result).code).toBe("herdr_delegate_runtime_mismatch");
+    expect(cleanupOf(result)).toEqual({ action: "none", reason: "matching_agent_preserved" });
+    expect(result.output.terminal_text).toBe("raw terminal\nnot json {still raw}\n");
   });
 
   test("a runtime mismatch fails but preserves the confirmed agent", async () => {

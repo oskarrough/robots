@@ -23,7 +23,6 @@ const HERDR_DELEGATE_MAX_READ_LINES = 4_294_967_295;
 const noCleanup = (reason: string): JsonObject => ({ action: "none", reason });
 const emptyHandles = (name: string, kind: string | null = null): AgentHandles => ({ name, kind, pane_id: null, tab_id: null, workspace_id: null, status: null });
 const emptyRuntimeValues = (): RuntimeValues => ({ provider: null, model: null, reasoning_level: null });
-const emptyResolvedRuntimeValues = (): ResolvedRuntimeValues => ({ ...emptyRuntimeValues(), subscription_billed: null });
 const isObject = (value: unknown): value is JsonObject => typeof value === "object" && value !== null && !Array.isArray(value);
 const errorCode = (error: unknown): string | null => error instanceof HerdrDelegateError && typeof error.upstream.code === "string" ? error.upstream.code : null;
 const asDelegateError = (error: unknown): HerdrDelegateError => error instanceof HerdrDelegateError ? error : new HerdrDelegateError({ code: "herdr_delegate_internal_error", message: error instanceof Error ? error.message : String(error) });
@@ -141,9 +140,9 @@ function decodeAgent(envelope: JsonObject, name: string, fallbackKind: string | 
   if (agent.agent !== undefined && typeof agent.agent !== "string") throw invalidResponse(command);
   return { name, kind: typeof agent.agent === "string" ? agent.agent : fallbackKind, ...pane, status: agent.agent_status };
 }
-function decodePiSessionPath(envelope: JsonObject): string | null {
+function decodeSessionRef(envelope: JsonObject): { kind: string; value: string } | null {
   const session = decodeAgentValue(envelope, "agent get").agent_session;
-  return isObject(session) && session.kind === "path" && typeof session.value === "string" ? session.value : null;
+  return isObject(session) && typeof session.kind === "string" && typeof session.value === "string" ? { kind: session.kind, value: session.value } : null;
 }
 function decodeSplit(envelope: JsonObject): { pane_id: string; tab_id: string; workspace_id: string | null } {
   return decodePane(resultObject(envelope, "pane split").pane, "pane split");
@@ -239,7 +238,7 @@ function requestedRuntime(nativeArgs: string[]): RuntimeValues {
   for (let index = 0; index < nativeArgs.length; index++) {
     const argument = nativeArgs[index]!;
     const equals = argument.indexOf("="), flag = equals < 0 ? argument : argument.slice(0, equals);
-    if (flag !== "--provider" && flag !== "--model" && flag !== "--thinking") continue;
+    if (flag !== "--provider" && flag !== "--model" && flag !== "--thinking" && flag !== "--effort") continue;
     const value = equals < 0 ? nativeArgs[++index] ?? null : argument.slice(equals + 1);
     if (flag === "--provider") provider = value;
     else if (flag === "--model") modelArgument = value;
@@ -247,8 +246,9 @@ function requestedRuntime(nativeArgs: string[]): RuntimeValues {
   }
   let model = modelArgument;
   if (model !== null) {
+    // An explicit --provider wins; only then a slash prefix is part of the model ID (openrouter's google/gemini-*).
     const slash = model.indexOf("/");
-    if (slash > 0) { provider = model.slice(0, slash); model = model.slice(slash + 1); }
+    if (provider === null && slash > 0) { provider = model.slice(0, slash); model = model.slice(slash + 1); }
     const colon = model.lastIndexOf(":");
     if (colon > 0 && PI_REASONING_LEVELS.has(model.slice(colon + 1))) {
       if (reasoningLevel === null) reasoningLevel = model.slice(colon + 1);
@@ -273,25 +273,61 @@ async function readResolvedPiRuntime(sessionPath: string): Promise<RuntimeValues
   } catch {}
   return resolved;
 }
-function requestedValuesMatch(requested: RuntimeValues, resolved: ResolvedRuntimeValues): boolean | null {
-  const entries = Object.entries(requested).filter((entry): entry is [keyof RuntimeValues, string] => entry[1] !== null);
-  if (entries.length === 0 || entries.some(([key]) => resolved[key] === null)) return null;
-  return entries.every(([key, value]) => resolved[key] === value);
+async function readResolvedClaudeRuntime(cwd: string, sessionId: string): Promise<RuntimeValues> {
+  const resolved = emptyRuntimeValues(), home = process.env.HOME;
+  if (!home) return resolved;
+  try {
+    const text = await Bun.file(`${home}/.claude/projects/${cwd.replace(/[^A-Za-z0-9-]/g, "-")}/${sessionId}.jsonl`).text();
+    for (const line of text.split("\n")) {
+      if (!line) continue;
+      let event: unknown;
+      try { event = JSON.parse(line); } catch { continue; }
+      if (isObject(event) && event.type === "assistant" && isObject(event.message) && typeof event.message.model === "string") {
+        resolved.provider = "anthropic"; resolved.model = event.message.model;
+      }
+    }
+  } catch {}
+  return resolved;
 }
-async function inspectFreshRuntime(command: FreshOptions, handles: AgentHandles): Promise<{ handles: AgentHandles; runtime: RuntimeState }> {
-  const requested = requestedRuntime(command.nativeArgs);
-  if (command.kind !== "pi") return { handles, runtime: { requested, resolved: emptyResolvedRuntimeValues(), verified: false, matches_requested: null } };
-  let inspectedHandles = handles, sessionPath: string | null = null;
+// A claude --model value is an alias ("fable"), so a resolved ID that contains it counts as a match.
+const modelSatisfies = (requested: string, resolved: string): boolean => resolved === requested || resolved.includes(requested);
+function requestedValuesMatch(requested: RuntimeValues, resolved: ResolvedRuntimeValues): boolean | null {
+  const comparisons: boolean[] = [];
+  if (requested.provider !== null && resolved.provider !== null) comparisons.push(resolved.provider === requested.provider);
+  if (requested.model !== null && resolved.model !== null) comparisons.push(modelSatisfies(requested.model, resolved.model));
+  if (requested.reasoning_level !== null && resolved.reasoning_level !== null) comparisons.push(resolved.reasoning_level === requested.reasoning_level);
+  return comparisons.length === 0 ? null : comparisons.every(Boolean);
+}
+async function inspectRuntimeOnce(command: FreshOptions, handles: AgentHandles): Promise<{ handles: AgentHandles; values: RuntimeValues }> {
+  let inspectedHandles = handles, session: { kind: string; value: string } | null = null;
   try {
     const envelope = await callHerdrJson(["agent", "get", command.name]);
     inspectedHandles = decodeAgent(envelope, command.name, command.kind, "agent get");
-    sessionPath = decodePiSessionPath(envelope);
+    session = decodeSessionRef(envelope);
   } catch {}
-  const values = sessionPath === null ? emptyRuntimeValues() : await readResolvedPiRuntime(sessionPath);
-  const subscriptionBilled = values.provider === "openai-codex" ? true : values.provider === "openai" ? false : null;
+  let values = emptyRuntimeValues();
+  if (session !== null && command.kind === "pi" && session.kind === "path") values = await readResolvedPiRuntime(session.value);
+  else if (session !== null && command.kind === "claude" && session.kind === "id") values = await readResolvedClaudeRuntime(command.cwd, session.value);
+  return { handles: inspectedHandles, values };
+}
+function runtimeState(kind: string, requested: RuntimeValues, values: RuntimeValues): RuntimeState {
+  const subscriptionBilled = values.provider === "openai-codex" ? true : values.provider === "openai" || values.provider === "openrouter" || values.provider === "vercel-ai-gateway" ? false : null;
   const resolved = { ...values, subscription_billed: subscriptionBilled };
-  const verified = resolved.provider !== null && resolved.model !== null && resolved.reasoning_level !== null && resolved.subscription_billed !== null;
-  return { handles: inspectedHandles, runtime: { requested, resolved, verified, matches_requested: requestedValuesMatch(requested, resolved) } };
+  const verified = resolved.provider !== null && resolved.model !== null && (kind !== "pi" || resolved.reasoning_level !== null);
+  return { requested, resolved, verified, matches_requested: requestedValuesMatch(requested, resolved) };
+}
+// Herdr registers agent_session asynchronously after start, so an immediate read can miss it.
+const RUNTIME_VERIFY_BACKOFF_MS = [500, 1_000, 2_000] as const;
+async function inspectFreshRuntime(command: FreshOptions, handles: AgentHandles): Promise<{ handles: AgentHandles; runtime: RuntimeState }> {
+  const requested = requestedRuntime(command.nativeArgs);
+  if (command.kind !== "pi") return { handles, runtime: runtimeState(command.kind, requested, emptyRuntimeValues()) };
+  let inspection = await inspectRuntimeOnce(command, handles);
+  for (const backoffMs of RUNTIME_VERIFY_BACKOFF_MS) {
+    if (runtimeState("pi", requested, inspection.values).verified) break;
+    await Bun.sleep(backoffMs);
+    inspection = await inspectRuntimeOnce(command, handles);
+  }
+  return { handles: inspection.handles, runtime: runtimeState("pi", requested, inspection.values) };
 }
 function runtimeMismatch(handles: AgentHandles, runtime: RuntimeState): JsonObject | null {
   if (runtime.matches_requested !== false) return null;
@@ -329,13 +365,15 @@ async function callPrompt(name: string, text: string, timeoutMs?: number): Promi
   return callHerdrJson(args);
 }
 
+export const WORKER_CONTRACTS = "To ask the orchestrator anything or report a blocker: stop, print one final line starting with `ORCHESTRATOR: <question or blocker>`, and end your turn. Your settled pane is the message. Do not look for another channel or work around the question.\n\nEnd with a written report, not a tool call or silence. If you did nothing, say why. An empty final turn is not a result.";
+
 /** Runs the fresh-agent create → verify → optional move → prompt → read pipeline. */
 export async function runFreshDelegatePipeline(command: DelegateCommand): Promise<JsonObject> {
   const setup = await prepareFreshAgent(command); if ("output" in setup) return setup.output;
   const inspection = await inspectFreshRuntime(command, setup.handles), mismatch = runtimeMismatch(inspection.handles, inspection.runtime); if (mismatch) return mismatch;
   const placement = await moveFreshAgent(command, setup.destinationTab, inspection.handles, inspection.runtime); if ("output" in placement) return placement.output;
   let handles = placement.handles, prompt: PromptState;
-  try { ({ handles, prompt } = decodePrompt(await callPrompt(command.name, command.prompt, command.timeoutMs), command.name, command.kind)); }
+  try { ({ handles, prompt } = decodePrompt(await callPrompt(command.name, `${command.prompt}\n\n${WORKER_CONTRACTS}`, command.timeoutMs), command.name, command.kind)); }
   catch (error) {
     const inspected = await inspectAgent(command.name, handles, command.lines);
     return failure(true, "prompt", error, inspected.handles, noCleanup("agent_started_preserved"), { runtime: inspection.runtime, prompt: promptErrorState(error), ...(inspected.terminalText === null ? {} : { terminal_text: inspected.terminalText }) });
@@ -343,8 +381,18 @@ export async function runFreshDelegatePipeline(command: DelegateCommand): Promis
   let terminalText: string;
   try { terminalText = await readAgentTerminal(command.name, command.lines); }
   catch (error) { return failure(true, "read", error, handles, noCleanup("agent_started_preserved"), { runtime: inspection.runtime, prompt }); }
-  if (prompt.settled === "blocked") return failure(true, "prompt", new HerdrDelegateError({ code: "herdr_delegate_agent_blocked", message: `Agent ${command.name} settled blocked` }), handles, noCleanup("agent_started_preserved"), { runtime: inspection.runtime, prompt, terminal_text: terminalText });
-  return { ok: true, created: true, agent: handles, runtime: inspection.runtime, prompt, terminal_text: terminalText };
+  // A claude session file (and occasionally a slow pi session) only carries the runtime after the first reply.
+  let runtime = inspection.runtime;
+  if (!runtime.verified && (command.kind === "pi" || command.kind === "claude")) {
+    const late = await inspectRuntimeOnce(command, handles);
+    if (late.values.model !== null) runtime = runtimeState(command.kind, runtime.requested, late.values);
+    if (runtime.matches_requested === false) {
+      const error = new HerdrDelegateError({ code: "herdr_delegate_runtime_mismatch", message: "Resolved runtime does not match the requested runtime", requested: runtime.requested, resolved: runtime.resolved });
+      return failure(true, "verify", error, handles, noCleanup("matching_agent_preserved"), { runtime, prompt, terminal_text: terminalText });
+    }
+  }
+  if (prompt.settled === "blocked") return failure(true, "prompt", new HerdrDelegateError({ code: "herdr_delegate_agent_blocked", message: `Agent ${command.name} settled blocked` }), handles, noCleanup("agent_started_preserved"), { runtime, prompt, terminal_text: terminalText });
+  return { ok: true, created: true, agent: handles, runtime, prompt, terminal_text: terminalText };
 }
 
 /** Emits one public JSON envelope and returns its process exit code. */
