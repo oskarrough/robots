@@ -5,51 +5,56 @@ Not so private public robot files.
 HERDR-DELEGATE
 ---------------
 
-`herdr-delegate` is one shortcut for handing a prompt to a fresh named agent
-inside a live Herdr session (`HERDR_ENV=1`). Install it from this checkout with
-`bun link`, then run:
+`herdr-delegate` turns one worker turn into one JSON envelope inside a live
+Herdr session (`HERDR_ENV=1`). Install it from this checkout with `bun link`.
 
-    herdr-delegate NAME PROMPT --kind KIND [options] -- [native agent args...]
+    herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID]
+                   [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N]
+                   -- [native agent args...]
+    herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]
+    herdr-delegate wait NAME [--timeout MS] [--lines N] [--confirm-interval MS]
 
-It performs `agent list` → `pane split` → `agent start` → runtime verification
-→ optional `pane move` → `agent prompt --wait` → `agent read --format text`.
-Use Herdr itself to prompt existing agents, launch without a prompt, steer,
-move, read, or close workers.
+The fresh form runs `agent list` → `pane split` → `agent start` (one retry on
+`agent_pane_busy`) → runtime verification → optional `pane move` → a brief with
+both worker contracts appended → `agent prompt --wait` → a confirmed settle →
+`agent read`. `prompt` does the same from the prompt step for a warm worker
+(without repeating the contracts); `wait` from the settle step, e.g. after a
+timeout. `--workspace` takes a workspace id or unique label and resolves to its
+active tab; it is mutually exclusive with `--tab`. Use Herdr itself to steer,
+move, read, or close workers. Nothing is ever closed.
 
-Options are `--kind` (required), `--direction right|down`, `--cwd`, `--tab`,
-`--workspace`, `--start-timeout` (3001–300000 ms; default 30000), `--timeout`
-(nonnegative ms; omitted means indefinite), and `--lines` (default 120, maximum
-4294967295). `--tab` joins that existing tab. `--workspace` accepts an ID or a
-unique label and joins its active tab. They are mutually exclusive. Native
-agent arguments follow `--`.
+A settle is confirmed from the worker's transcript, not its screen. The
+session file Herdr points at (`agent_session`; pi/omp paths, Claude ids, and
+codex ids are understood) must show the last assistant turn ended, and still
+show it `--confirm-interval` (20 s) later. The transcript outranks Herdr's
+status because a hook can keep reporting `working` after the turn (a stuck
+background job) and a screen-derived status can flap; only `blocked` is
+trusted from status alone. `agent wait` is polled in confirm-interval slices
+on the way. Kinds without a known transcript format settle on status alone.
 
-The wrapper writes exactly one JSON envelope to stdout and exits 0 for success
-or 1 for failure. It returns `ok`, `created`, final agent/pane/tab/workspace
-handles, runtime verification, prompt state, and raw `terminal_text`. Failures
-also return `stage`, the upstream Herdr error, and cleanup status.
-`created: true` means a named agent was confirmed, not merely that a pane was
-allocated.
+Runtime verification parses the requested `--provider`/`--model`/`--thinking`
+from the native args and compares them to what the session file recorded
+(pi `model_change`/`thinking_level_change`, claude `message.model`). A mismatch
+is `ok: false` at `stage: "verify"` before the brief is sent, so a wrong-model
+worker never burns a turn. `runtime` carries `requested`, `resolved` (with
+`subscription_billed`), `verified`, and `matches_requested`; a kind or session
+the parser cannot read leaves `matches_requested: null` and proceeds.
 
-For Pi, `runtime.requested` reports provider, model, and reasoning level from
-native arguments. `runtime.resolved` reads Pi's session JSONL.
-`subscription_billed` is true for resolved `openai-codex`, false for `openai`,
-and null for an unmapped provider. A known mismatch exits 1 at
-`stage: "verify"`. Other agent kinds return null resolved values with
-`verified: false`.
-
-Once an agent is confirmed, the wrapper never closes its pane. Prompt timeouts,
-blocked agents, failed placement, and ambiguous starts remain available for
-inspection. A failed start closes its pane only after `agent get` confirms that
-the named agent does not own it.
-
-`herdr-delegate wait NAME [NAME...] [--timeout MS] [--lines N]
-[--confirm-interval MS] [--any|--all]` waits for real settles: it prechecks
-each name, then re-arms `agent wait` for as long as the pane still paints a
-spinner, `Working...`, `esc to interrupt`, a Claude `Verbing… (` line, `N
-shell`, or `new message`, and confirms once more 20 seconds later. It writes
-`{ok, stage, settled: [{name, status, classification, terminal_text}], running,
-timed_out}`, where `classification` is `never_ran`, `blocked`, or `report`.
-`--any` (default) returns on the first settle; `--all` waits for every name.
+Every command writes one envelope and exits 0 only for `ok: true`:
+`{ok, stage, created?, agent: {name, kind, pane_id, tab_id, workspace_id, status},
+runtime?, classification?, last_message?, terminal_text?, error?}`. `last_message` is the
+final assistant text from the transcript; `terminal_text` is the visible
+viewport (`--lines`, default 120), truncated to pane width. `classification`
+is `report` (ok), `blocked` (Herdr `blocked` or a final line starting
+`ORCHESTRATOR:`), `error` (the provider ended the turn), `empty` (a turn with
+no assistant text), or `never_ran` (a prompt rejected with Herdr's
+`agent_prompt_stalled`, `agent_not_found`, or `agent_not_running`). A prompt
+or wait `timeout` is `ok: false` at `stage: prompt` or `stage: wait`; the worker
+may still be running or awaiting settle confirmation. Rerun `wait`, not `prompt`.
+`stage` names where a failure happened: `preflight`, `split`, `start`, `verify`,
+`move`, `prompt`, `wait`, `settled`, `arguments`, `environment`. `--timeout` omitted
+waits indefinitely. The budget includes settle confirmation; leave room in
+your harness's command timeout for fresh-worker startup and reading the result.
 
 AGENTS
 ---------------

@@ -1,41 +1,12 @@
 # Delegate: troubleshooting
 
-Recovery procedures for things that have already gone wrong. Read when a herdr command errors or a worker misbehaves in a way SKILL.md doesn't name.
+Recovery for things SKILL.md doesn't name. Each entry is tagged with its exit: `[herdr bug]` file it and delete when fixed, `[ours]` a provider fact that stays until the provider changes.
 
-**This file is meant to shrink to nothing.** Almost none of it is delegation judgment — it's herdr defects and provider quirks parked here because they cost real time. Each entry is tagged with how it leaves: `[herdr bug]` file it and delete the entry when fixed, `[herdr docs]` belongs in `herdr --skill`, `[ours]` a real provider fact that stays until the provider changes. Don't add an entry without a tag and an exit.
-
-## herdr commands
-
-- `[herdr bug]` **`agent prompt` can return success while the text never landed.** The expensive one — a never-started worker is `idle` exactly like a finished one. Guard per SKILL.md §3 (context % off `0.0%`), resend once.
-- `[herdr bug]` **`--source recent-unwrapped` can return empty for pi panes**; `visible` works. Contradicts herdr's own docs, which recommend recent-unwrapped for transcripts.
-- `[herdr bug]` **`pane move` silently no-ops on a zoomed tab** — `pane zoom <pane-id> --off` first. Never disturbs a live agent otherwise.
-- `[herdr bug]` **`agent_pane_busy` right after `pane split`** — wait ~5–10s and retry `agent start` once; still refusing is a dud pane, close and split fresh.
-- `[herdr bug]` **`/new` returns `agent_prompt_stalled`** — slash commands finish instantly, so herdr sees no state change. Confirm with `agent read`.
-- `[herdr docs]` **`--wait` timeout ≠ stuck** — exits 1 with `{"error":{"code":"timeout"}}` but the worker is usually still working. Don't re-prompt; poll `agent get` until `agent_status` leaves `working`.
-- `[herdr docs]` **`agent stop` does not exist** — halt a worker with `send-keys <name> esc`, then `pane close <pane>` once it's truly done.
-- `[herdr docs]` **Result envelopes aren't uniform** — `pane split` returns `.result.pane`, `pane move` doesn't. Verify with `pane list` rather than trusting a field name across commands.
-
-## Workers that settle wrong
-
-SKILL.md §3 has the general rule: `done` with no assistant text is not a completion.
-
-- `[ours]` **OpenRouter `Provider finish_reason: error`** can end a turn while preserving the session. Prompt “continue, that was a transient provider error” once; recurring failures call for a different model or a smaller brief.
-- `[ours]` **`Codex error: The usage limit has been reached`** settles as `done` ~15s after briefing with nothing done — a fast `done` on a big slice is the tell. Rebuild with a different model and tell the human their sub quota is out.
-- `[ours]` **A prompt sent while pi is self-compacting is silently eaten** — if `agent_status` never leaves idle, read the pane and re-send. "Queued message for after compaction" fires on its own; don't re-send that, and don't `esc` a compaction near the finish line.
-- `[ours]` **`agent wait --until done` fired at submit time** — a follow-up prompt to a warm pi worker can return `done` within seconds while the worker is still working (the old `done` from its previous turn). Sleep ~25s after `agent prompt` before arming the wait, and treat a fast `done` on a fix round as suspect: read the pane for a spinner.
-- `[ours]` **glm-5.3-flash hangs with zero token movement** — statusline `↑Nk` frozen for minutes, `esc` does nothing, queued steering never consumed. If `jj st` shows nothing written for its task, close the pane and restart; split a repeatedly failing cross-package brief or escalate to a stronger implementer.
-- `[ours]` **Switching a pi model mid-session is unreliable** — `/model` opens a picker the full `id:level` string doesn't match. If the model matters, rebuild the pane with the right start args. Claude Code takes `/model opus` directly.
-
-## Reading a pane that won't read
-
-`[herdr bug]` Past 4 panes in a tab `agent read` returns confetti — panes go ~15 columns wide. Read the transcript from disk instead:
-
-```sh
-f=$(herdr agent get <name> | jq -r .result.agent.agent_session.value)
-# Claude Code sessions:
-jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="text") | .text' "$f" | tail -60
-# pi sessions — records nest one level deeper:
-jq -r 'select(.type=="message" and .message.role=="assistant") | (.message.content[]? | select(.type=="text") | .text)' "$f" | tail -60
-```
-
-`[herdr docs]` `agent get` nests everything under `.result.agent` (`.agent_status`, `.agent_session`) — a guessed shorter path returns null rather than erroring, so a watcher built on it waits forever. Same trap with a top-level `.role` filter on a pi session: silence that reads as "no report".
+- `[herdr bug]` **`agent prompt` succeeds while the text never landed** — a never-started worker is `idle` like a finished one. `herdr-delegate` and `herdr-delegate prompt` surface it as `classification: never_ran` (herdr's `agent_prompt_stalled`); a raw `agent prompt` has no such gate, so read the pane and resend once.
+- **A killed worker loses its name** — its shell and pane may survive, but Herdr drops the agent handle. `herdr-delegate prompt` returns `never_ran` with `agent_not_found` or `agent_not_running`; `wait` cannot revive it. Close only the pane you created and replace the worker if the task requires recovery.
+- `[herdr bug]` **`pane move` silently no-ops on a zoomed tab** — `pane zoom <pane-id> --off` first. `herdr-delegate --tab` reports this as `stage: "move"` with `created: true`: the worker is started but unprompted, so follow with `herdr-delegate prompt <name>`, not a respawn.
+- `[herdr bug]` **Past 4 panes in a tab `agent read` returns confetti** — ignore `terminal_text` and use `last_message`, which comes from the transcript. For a kind herdr-delegate cannot read, the transcript path is `herdr agent get <name> | jq -r .result.agent.agent_session.value`.
+- **`agent stop` does not exist** — `send-keys <name> esc`, then `pane close` once settled.
+- `[ours]` **OpenRouter `Provider finish_reason: error`** ends a turn but keeps the session. Prompt "continue, that was a transient provider error" once; recurring means a smaller brief or another model.
+- `[ours]` **A prompt sent while pi is self-compacting is silently eaten** — if status never leaves idle, read the pane and resend. Don't `esc` a compaction, and don't resend the automatic "Queued message for after compaction".
+- `[ours]` **glm-5.3-flash hangs with zero token movement** (`↑Nk` frozen, `esc` ignored). If `jj st` shows nothing for its task, close and restart; split the brief or escalate.
