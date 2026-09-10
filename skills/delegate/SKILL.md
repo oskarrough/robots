@@ -71,6 +71,15 @@ State both contracts:
 
 > End with a written report, not a tool call or silence. If you did nothing, say why. An empty final turn is not a result.
 
+Lessons from the 2026-09-10 fifteen-worker cleanup (DeepSeek v4.1 flash did all of it, ~$0.10–0.40 per task):
+
+- **Migration version prefixes collide across workers.** Two workers writing migrations the same hour both picked `<date>020000`; Supabase rejects duplicate versions. Assign each brief its own prefix (`…040000`, `…050000`, …).
+- **A stale active environment or house in `~/.config/arbe/config.json` looks like broken auth.** Workers running `arbe env use` / `arbe house use` on test houses rewrite the shared config; other workers then see "not in house" refusals or misreport slow prod as "token invalid or revoked". Tell workers not to change the active house/env, and check `arbe whoami` yourself before believing a token blocker.
+- **A prod migration gets a fresh-context adversarial review before `push-migrations`**, and push only after the www deploy the schema change pairs with (a dropped publication or route must never precede the bundle that stops using it). All pending files apply at once, so hold the push until every in-flight migration is committed.
+- **`jj squash -- <file>` sweeps other workers' uncommitted hunks in that file.** Tell workers to leave a shared file's foreign hunks in `@` and report them; fold them into the owning change yourself.
+- **Background waits die under memory pressure** (many `bun run test` at once). Poll with a foreground `agent wait --timeout` per worker instead of one long detached wait for all.
+- **Generated bundles need one owner at the end.** Several sandbox changes each left `generated/bundles.ts` dirty; rebuild once after the last one lands and commit it as its own change.
+
 ## 3. Watch and steer
 
 For a crew, prompt without waiting, then run a detached wait per explicit agent name. Aborting a wait does not cancel the worker.
