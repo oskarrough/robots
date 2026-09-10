@@ -1,117 +1,79 @@
 ---
 name: arbe-review
-description: "Two-mode code review: diff review after implementing a task, and a sweep across the codebase that creates follow-up tasks. Use after finishing a change or when reviewing someone else's. Single diff or single file scale — arbe-pipeline-audit for a call path, arbe-improve-codebase for modules."
+description: "Two-mode code review: diff review after implementing a task, and a sweep across the codebase that files follow-up tasks. Use after finishing a change or when reviewing someone else's. Single diff or single file scale — arbe-pipeline-audit for a call path, arbe-improve-codebase for modules."
 ---
 
-# How to review
+# Review
 
-Two modes: diff review after implementing a task, and sweep review across a codebase.
+Two modes: **diff review** of one change, **sweep** over a codebase that files tasks for other sessions.
 
-## Greenfield context
-
-If the project is alpha software with no real users, backward compatibility is not a constraint. If you spot a naming or design that is clearly wrong or inconsistent with the architecture docs, say so directly. Don't hedge. Surface the tradeoff and offer a concrete suggestion. Bad names and bad boundaries compound quickly; fixing them early is cheap.
+Both modes: the project's code-style and testing docs outrank this file when present, but flag a doc violation only when you can quote the rule and the line that breaks it. Skip what tooling already enforces (lint, typecheck, formatter). Don't invent issues; if nothing needs to change, say so. Alpha software with no real users has no backward-compatibility constraint, so a wrong name or boundary is a finding, stated plainly with a concrete alternative.
 
 ## Diff review
 
-Run after completing a task, or when explicitly asked to review.
+Pin the comparison point first: a commit, a branch, `main`, or specified files. If unclear, ask. Capture one diff command and reuse it: `jj diff --from <point> --stat` then per file, or `git diff <point>...HEAD`. For each changed file read the whole file, not just the hunks. Split a large diff across subagents by independent area so contexts don't pollute each other.
 
-Pin the comparison point first — a commit, a branch, `main`, `HEAD~5`, or specified files. If unclear, ask. Capture the diff command once (`jj diff -r <point>..@`, `git diff <point>...HEAD`) and use it throughout.
+Three axes, in this order:
 
-For each changed file, read the full file for context — not just the diff lines.
-
-Review two axes: spec and quality.
-
-Spec: does the diff match the task, PR, or issue? Look for missing requirements, scope creep, and wrong implementation.
-
-Quality: use the categories below. For large diffs, split independent areas across subagents so contexts don't pollute each other.
-
-Skip what tooling already enforces: lint, typecheck, formatter.
-
-Flag issues in these categories, ordered by importance:
-
-### Unnecessary complexity
-
-- abstractions that serve one call site → inline them
-- helper functions for basic object creation → use literals directly
-- wrapper objects around simple data → pass primitives
-- methods that just delegate → should do meaningful work or not exist
-- getters/setters → direct property access
-- builders, factories, config objects for straightforward things → delete the ceremony
-
-### Wrong patterns
-
-- try/catch where validation + early return works
-- type casts silencing real errors (`/** @type {any} */`, `as Type`)
-- silent error swallowing → let errors propagate or handle meaningfully
-- default exports → named exports
-- deep nesting → flatten
-- class soup in HTML → semantic elements, data-* attributes, ARIA
-- class soup in CSS → element selectors, modern selectors (`:has`, `:where`, `:is`)
-
-### Over-engineering
-
-- features beyond what was asked
-- "future-proofing" abstractions
-- extra configurability nobody requested
-- comments explaining what code does instead of why
-- added documentation nobody asked for
-
-### Data flow legibility
-
-- can you describe the function as `stage → stage → stage`? if not, it's mixing concerns
-- each stage should have a typed input and typed output — the types document the flow
-- side effects should be identifiable stages, not interleaved with transforms
-- a function that fetches, transforms, and writes in one block → split into stages, compose them
-- two functions sharing a pipeline shape but differing in one stage → extract the pipeline, parameterize the differing stage
-- the pipeline doesn't have to be literally `a |> b |> c` — it means each step is named, testable, and the composition is visible at the call site
-
-### Naming and clarity
-
-- abbreviated variable names → full words
-- generic names (`data`, `handler`, `process`) → domain-specific verbs
-- method names that don't express the concept directly
-
-### Output
-
-Be direct. For each issue:
-- what: the specific thing
-- why: which principle it violates, referencing the project's code-style doc when present
-- fix: concrete suggestion, not vague advice
-
-If nothing needs to change, say so. Don't invent issues.
-
-Keep it conversational. This is a peer review, not a report.
-
-## Sweep review
-
-Breadth-first pass over all source files. Find only — no fixes, no suggestions. Create one task per finding group so other sessions do the work.
-
-The separation matters: finding and fixing in the same pass loses breadth.
-
-If you encounter a naming or design that clearly conflicts with the architecture docs, tasks, or canonical schema layer — and a better alternative is obvious — surface it as a separate design question before the task list. One paragraph: what's inconsistent, what the better design would be, why it matters. This is not a task; it's a signal for the human to decide before work begins.
+1. **Spec.** Does the diff do what the task, PR, or issue asked? Missing requirements, scope creep, wrong reading of the ask.
+2. **Correctness.** Edge cases, error paths, ordering and concurrency, state left inconsistent on failure, changed behavior with no test covering it. Two procedures, always: for every deleted or replaced line, name the invariant it enforced and find where the new code re-establishes it; for every changed function, grep its callers for a broken precondition, return shape, or new exception. Verify before you flag: read the caller, run the check, reproduce the claim in the current tree. A finding you couldn't confirm is a question, not a finding.
+3. **Quality.** The categories below, most important first.
 
 ### Categories
 
-Check in this order.
+**Unnecessary complexity**
+- abstraction with one call site → inline it
+- helper for basic object creation → literal
+- wrapper object around simple data → pass primitives
+- method that only delegates → do meaningful work or don't exist
+- getters/setters → direct property access
+- builders, factories, config objects for straightforward things → delete the ceremony
 
-Duplication: logic or structure repeated across files. Note file:line for each occurrence.
+**Wrong patterns**
+- try/catch where validation + early return works
+- type casts silencing real errors (`/** @type {any} */`, `as Type`)
+- silent error swallowing → propagate or handle meaningfully
+- default exports → named exports
+- deep nesting → flatten
+- class soup in HTML → semantic elements, data-* attributes, ARIA
+- class soup in CSS → element selectors, `:has`, `:where`, `:is`
 
-Anti-patterns: violations of the project's code-style doc, such as try/catch over early returns, type casts silencing errors, default exports, deep nesting, class soup in HTML/CSS, and silent error swallowing.
+**Over-engineering**
+- features beyond the ask, "future-proofing", configurability nobody requested
+- comments explaining what instead of why; documentation nobody asked for
+- a special case layered on shared infrastructure → the fix isn't deep enough; name the general change to the mechanism
 
-Dead code: exports with no importers, unreachable branches, commented-out blocks.
+**Data flow legibility**
+- a function should read as `stage → stage → stage`, each with typed input and output; if it can't, it's mixing concerns
+- side effects are named stages, not interleaved with transforms; fetch-transform-write in one block → split and compose
+- two functions with the same pipeline shape differing in one stage → extract the pipeline, parameterize the stage
+- literal `a |> b |> c` is not required; each step named and testable, composition visible at the call site, is
 
-Structural issues: files doing more than one thing, functions mixing side effects with transforms, pipeline stages not separated.
-
-Inconsistencies: same concept expressed differently across files, such as naming, patterns, or error handling style.
-
-Type safety: untyped values flowing through the system, `any` casts, missing return types on exported functions.
-
-Error handling gaps: errors discarded, recovery paths missing, UI errors without actionable messages.
-
-Test bloat: mock-heavy unit tests, assertions on call shapes instead of contracts, large test files with low signal. Flag for deletion or rewrite as integration. See the project's testing or code-style docs when present.
+**Naming and clarity**
+- abbreviations → full words; generic names (`data`, `handler`, `process`) → domain-specific verbs
+- method names that don't say the concept
 
 ### Output
 
-One task per finding group. Description must include specific file paths and line numbers, which category or principle it violates, and no suggested fix.
+Peer review, not a report. Findings first, ordered by axis then importance. Each one names the file and line, the failure scenario (which input or state produces which wrong result) or for quality findings the concrete cost (what is duplicated, wasted, or harder to change), and the fix: concrete, not advice. Plain markdown, no tables, no narration of what you checked.
 
-Skip categories with nothing to flag. Don't invent issues.
+## Sweep
+
+Breadth-first over all source files. Find only: no fixes, no suggestions. Finding and fixing in the same pass loses breadth.
+
+If a name or design clearly conflicts with the architecture docs or canonical schema and a better alternative is obvious, surface it as one paragraph before the task list: what's inconsistent, what the better design is, why it matters. It's a decision for the human, not a task.
+
+Check in this order:
+
+- **Duplication:** logic or structure repeated across files; file:line for each occurrence
+- **Anti-patterns:** the Wrong patterns list above, where no lint rule exists for it
+- **Dead code:** exports with no importers, unreachable branches, commented-out blocks
+- **Structural:** files doing more than one thing, side effects mixed with transforms, pipeline stages not separated
+- **Inconsistencies:** one concept expressed differently across files (naming, patterns, error handling)
+- **Type safety:** untyped values flowing through the system, `any` casts, missing return types on exports
+- **Error handling gaps:** errors discarded, recovery paths missing, UI errors without an actionable message
+- **Test bloat:** mock-heavy unit tests, assertions on call shapes instead of contracts, big low-signal files; flag for deletion or rewrite as integration
+
+### Output
+
+One task per finding group, in whatever tracker the project uses: file paths and line numbers, the category or principle violated, no suggested fix. Skip categories with nothing to flag.

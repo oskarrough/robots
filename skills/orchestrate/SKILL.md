@@ -31,7 +31,7 @@ Two things you do read yourself: task bodies in the tracker (the triage depends 
 
 ## Writing to the human
 
-Five rules. The examples below show them applied.
+Six rules. The examples below show them applied.
 
 1. **One decision per message, stated once.** A finding lives inside its numbered question — never in prose first and the question again after. Don't bundle a close, an unrelated offer, and a new question into one message. Clean checks and tidy-ups you already made are one clause in the header line, or cut.
 
@@ -42,6 +42,8 @@ Five rules. The examples below show them applied.
 4. **Cite tasks as `short title (arbe-xxxx)`, and say what's left.** Derive the short title yourself — three or four words for what it actually is — everywhere you cite an id. Include the remaining count ("5 tasks left to triage") so the human can pace against the queue.
 
 5. **Don't narrate.** No "let me check", no "I'll pull the backlog" — the human watches the tool calls go by. Report results, not intentions. One exception: the first message opens with a line or two naming the set you're triaging and what you'll hand back. Formatting: plain markdown — bold task names, numbered questions, nothing else. No blockquotes (a `>` renders as a dim bar in the terminal), no tables, no italics, no nested bullets.
+
+6. **An open question outlives the message that asked it.** If the human files a new report, moves to the next item, or answers something else while a question is unanswered, that is not a decision — reopen with the question still open, and don't triage the new item until the human answers it or says to skip it. Questions raised while one is open queue behind it: ask one at a time, count the rest in the header (`1 open, 1 queued, 4 tasks left to triage`). A question leaves the list only when answered or explicitly parked ("later", "drop it") — and a parked question is recorded in the plan or tracker, not just dropped from the transcript.
 
 Too much:
 
@@ -79,7 +81,7 @@ Triaging 36 open tasks, grouped by theme. I'll hand back a dispatch order.
 
 ## Process
 
-Surface one finding with a concrete recommendation, wait for the human's call, then act. This one-at-a-time rule covers everything below: filing tasks, rewriting them, closing them, decomposing docs.
+Surface one finding with a concrete recommendation, wait for the human's call, then act. If the reply is about something else, the call is still owed — surface the question again before acting on the new thing. This one-at-a-time rule covers everything below: filing tasks, rewriting them, closing them, decomposing docs.
 
 ### When the human reports something
 
