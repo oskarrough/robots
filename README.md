@@ -16,9 +16,9 @@ Herdr session (`HERDR_ENV=1`). Install it from this checkout with `bun link`.
 
 The fresh form runs `agent list` → `pane split` → `agent start` (one retry on
 `agent_pane_busy`) → runtime verification → optional `pane move` → a brief with
-both worker contracts appended → `agent prompt --wait` → a confirmed settle →
+the upward-reporting contract appended → `agent prompt --wait` → a confirmed settle →
 `agent read`. `prompt` does the same from the prompt step for a warm worker
-(without repeating the contracts); `wait` from the settle step, e.g. after a
+(without repeating the contract); `wait` from the settle step, e.g. after a
 timeout. `--workspace` takes a workspace id or unique label and resolves to its
 active tab; it is mutually exclusive with `--tab`. Use Herdr itself to steer,
 move, read, or close workers. Nothing is ever closed.
@@ -46,7 +46,7 @@ runtime?, classification?, last_message?, terminal_text?, error?}`. `last_messag
 final assistant text from the transcript; `terminal_text` is the visible
 viewport (`--lines`, default 120), truncated to pane width. `classification`
 is `report` (ok), `blocked` (Herdr `blocked` or a final line starting
-`ORCHESTRATOR:`), `error` (the provider ended the turn), `empty` (a turn with
+`BLOCKED <worker>:`), `error` (the provider ended the turn), `empty` (a turn with
 no assistant text), or `never_ran` (a prompt rejected with Herdr's
 `agent_prompt_stalled`, `agent_not_found`, or `agent_not_running`). A prompt
 or wait `timeout` is `ok: false` at `stage: prompt` or `stage: wait`; the worker

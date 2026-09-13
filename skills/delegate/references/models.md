@@ -4,7 +4,9 @@ Volatile. Ask Oskar before assuming free capacity or reintroducing benched model
 
 | work | spawn |
 | --- | --- |
-| ordinary implementation | `--kind pi -- --provider openrouter --model deepseek/deepseek-v4.1-flash --thinking high` (~$0.10–0.40 per task; verified 2026-09-10). Alt: `--provider openrouter --model z-ai/glm-5.3-flash` |
+| implementation (Oskar's pick 2026-09-13) | `--kind pi -- --provider openai-codex --model gpt-6-astra --thinking low` (sub-billed; stops for a scope question at every call site outside the file list, so the brief must say "call-site changes strictly required to wire the granted seams are in scope; make them and note them in the report" and list plumbing files like client.ts, package.json exports, and route callers up front) |
+| probes, verification, live checks (Oskar 2026-09-13: hand these to a pane, cheaper than doing them yourself) | `--kind pi -- --provider openrouter --model z-ai/glm-5.3-flash` |
+| ordinary implementation (alt) | `--kind pi -- --provider openrouter --model deepseek/deepseek-v4.1-flash --thinking high` (~$0.10–0.40 per task; verified 2026-09-10). Alt: `--provider openrouter --model z-ai/glm-5.3-flash` |
 | scouting, smoke tests | `--kind pi -- --provider openrouter --model google/gemini-3.8-flash` or `z-ai/glm-5.3-flash`; tight briefs. Alt: `gpt-5.6-luna` on `openai-codex`, `cursor-grok-4.6-high` via `--kind cursor` |
 | hard planning; review of migrations, dispatch, retry/error contracts (required) | `--kind pi -- --provider openai-codex --model gpt-5.6-sol --thinking high` (`medium` for ordinary work). Claude sub alternative: `--kind claude -- --model fable` |
 | UI design, hard thinking, adversarial review | `--kind claude -- --model opus --effort high` |

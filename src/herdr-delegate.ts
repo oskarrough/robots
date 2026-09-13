@@ -34,8 +34,9 @@ const str = (v: unknown): string | null => typeof v === "string" ? v : null;
 const code = (e: unknown): string | null => e instanceof HerdrError ? str(e.upstream.code) : null;
 const upstream = (e: unknown): Json => e instanceof HerdrError ? e.upstream : { code: "herdr_delegate_internal_error", message: e instanceof Error ? e.message : String(e) };
 
-/** Both contracts the orchestrator relies on, appended to every fresh brief so a worker always sees them. */
-export const WORKER_CONTRACTS = "To ask the orchestrator anything or report a blocker: stop, print one final line starting with `ORCHESTRATOR: <question or blocker>`, and end your turn. Your settled pane is the message. Do not look for another channel or work around the question.\n\nEnd with a written report, not a tool call or silence. If you did nothing, say why. An empty final turn is not a result.";
+/** Reporting contract appended to every fresh brief so results travel back without polling. */
+export const workerContract = (worker: string, delegator: string): string =>
+  `Your delegator is Herdr pane \`${delegator}\`. If you need help, send \`BLOCKED ${worker}: <question>\` to them with \`herdr agent prompt ${delegator} '<message>'\` (no \`--wait\`), then end your turn with the same line. When finished, send \`DONE ${worker}: <concise report>\` the same way, then end with that report. If you did nothing, say why.`;
 
 // ---- herdr calls ---------------------------------------------------------------------------
 
@@ -254,7 +255,7 @@ async function settle(name: string, kind: string | null, opts: Common, deadline:
  * assistant text, e.g. a quota refusal. Both are `ok: false` so a silent failure never reads as a report. */
 function classify(o: Observation): "blocked" | "error" | "empty" | "report" {
   const { transcript: t } = o;
-  if (o.agent.status === "blocked" || /^\s*ORCHESTRATOR:/m.test(t.last_message ?? "")) return "blocked";
+  if (o.agent.status === "blocked" || /^\s*BLOCKED(?:\s+[a-z][a-z0-9_-]{0,31})?:/m.test(t.last_message ?? "")) return "blocked";
   if (t.available && t.stop === "error") return "error";
   if (t.available && t.last_message === null) return "empty";
   return "report";
@@ -311,6 +312,8 @@ async function resolveDestinationTab(cmd: Fresh): Promise<string | null> {
 async function startFresh(cmd: Fresh): Promise<Json> {
   const base: Json = { created: false };
   const fail = (stage: string, error: unknown, extra: Json = {}): Json => ({ ok: false, ...base, stage, error: upstream(error), ...extra });
+  const delegator = process.env.HERDR_PANE_ID;
+  if (!delegator) return fail("environment", new HerdrError({ code: "herdr_delegate_caller_unknown", message: "HERDR_PANE_ID is required to tell the worker where to report" }));
   let destinationTab: string | null;
   try { destinationTab = await resolveDestinationTab(cmd); }
   catch (error) { return fail("preflight", error); }
@@ -340,7 +343,7 @@ async function startFresh(cmd: Fresh): Promise<Json> {
       if (move.changed !== true && move.reason !== "same_tab") throw new HerdrError({ code: "herdr_delegate_move_unchanged", message: `herdr did not move pane: ${String(move.reason)}` });
     } catch (error) { return fail("move", error, { agent: (await getAgent(cmd.name, cmd.kind))?.agent ?? null }); }
   }
-  return promptAndFinish(cmd.name, cmd.kind, `${cmd.prompt}\n\n${WORKER_CONTRACTS}`, cmd, base, runtime.requested);
+  return promptAndFinish(cmd.name, cmd.kind, `${cmd.prompt}\n\n${workerContract(cmd.name, delegator)}`, cmd, base, runtime.requested);
 }
 
 // ---- arguments -----------------------------------------------------------------------------
