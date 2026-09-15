@@ -8,7 +8,8 @@ HERDR-DELEGATE
 `herdr-delegate` turns one worker turn into one JSON envelope inside a live
 Herdr session (`HERDR_ENV=1`). Install it from this checkout with `bun link`.
 
-    herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID]
+    herdr-delegate NAME BRIEF --kind KIND [--timeout MS]
+                   [--tab ID | --workspace ID | --new-tab LABEL]
                    [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N]
                    -- [native agent args...]
     herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]
@@ -20,8 +21,10 @@ the upward-reporting contract appended → `agent prompt --wait` → a confirmed
 `agent read`. `prompt` does the same from the prompt step for a warm worker
 (without repeating the contract); `wait` from the settle step, e.g. after a
 timeout. `--workspace` takes a workspace id or unique label and resolves to its
-active tab; it is mutually exclusive with `--tab`. Use Herdr itself to steer,
-move, read, or close workers. Nothing is ever closed.
+active tab. `--new-tab LABEL` moves the worker into a new one-pane tab in the
+caller's workspace; unlike `tab create` followed by `--tab`, it does not leave an
+empty root shell. The three placement options are mutually exclusive. Use Herdr
+itself to steer, move, read, or close workers. Nothing is ever closed.
 
 A settle is confirmed from the worker's transcript, not its screen. The
 session file Herdr points at (`agent_session`; pi/omp paths, Claude ids, and

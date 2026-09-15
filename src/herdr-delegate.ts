@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // herdr-delegate: one envelope per worker turn.
-//   herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID] [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N] -- [agent args]
+//   herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID | --new-tab LABEL] [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N] -- [agent args]
 //   herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]
 //   herdr-delegate wait NAME [--timeout MS] [--lines N] [--confirm-interval MS]
 // A settle is confirmed from the worker's transcript (herdr's `agent_session`), not the screen.
@@ -13,7 +13,7 @@ type RuntimeState = { requested: RuntimeValues; resolved: RuntimeValues & { subs
 type Transcript = { available: boolean; turn_ended: boolean | null; stop: string | null; last_message: string | null; marker: string; runtime: RuntimeValues };
 type Observation = { agent: Agent; transcript: Transcript };
 type Common = { timeoutMs?: number; lines: number; confirmIntervalMs: number };
-type Fresh = Common & { name: string; prompt: string; kind: string; direction: string; cwd: string; tab: string | null; workspace: string | null; startTimeoutMs: number; nativeArgs: string[] };
+type Fresh = Common & { name: string; prompt: string; kind: string; direction: string; cwd: string; tab: string | null; workspace: string | null; newTab: string | null; startTimeoutMs: number; nativeArgs: string[] };
 
 class HerdrError extends Error {
   constructor(readonly upstream: Json) { super(String(upstream.message ?? "herdr failed")); }
@@ -335,9 +335,12 @@ async function startFresh(cmd: Fresh): Promise<Json> {
   base.runtime = runtime;
   // A wrong-model worker is a wasted turn: fail before prompting, keeping the pane for inspection.
   if (runtime.matches_requested === false) return fail("verify", runtimeMismatch(runtime), { agent: (await getAgent(cmd.name, cmd.kind))?.agent ?? null, terminal_text: await readTerminal(cmd.name, cmd.lines) });
-  if (destinationTab) {
+  if (destinationTab || cmd.newTab !== null) {
     try {
-      const move = (await callHerdrJson(["pane", "move", paneId, "--tab", destinationTab, "--split", cmd.direction, "--no-focus"])).move_result as Json;
+      const moveArgs = cmd.newTab
+        ? ["pane", "move", paneId, "--new-tab", "--workspace", process.env.HERDR_WORKSPACE_ID!, "--label", cmd.newTab, "--no-focus"]
+        : ["pane", "move", paneId, "--tab", destinationTab!, "--split", cmd.direction, "--no-focus"];
+      const move = (await callHerdrJson(moveArgs)).move_result as Json;
       // [herdr bug] `pane move` silently no-ops on a zoomed tab; report it rather than assume placement.
       // `same_tab` is the only other no-op reason and means the pane is already where it was asked to be.
       if (move.changed !== true && move.reason !== "same_tab") throw new HerdrError({ code: "herdr_delegate_move_unchanged", message: `herdr did not move pane: ${String(move.reason)}` });
@@ -374,7 +377,7 @@ function common(flags: Map<string, string>): Common {
   return { timeoutMs: integer(flags, "--timeout", undefined), lines, confirmIntervalMs: integer(flags, "--confirm-interval", CONFIRM_INTERVAL_MS)! };
 }
 
-const USAGE = `herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID] [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N] -- [agent args]
+const USAGE = `herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID | --new-tab LABEL] [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N] -- [agent args]
 herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]
 herdr-delegate wait NAME [--timeout MS] [--lines N] [--confirm-interval MS]
 
@@ -398,13 +401,15 @@ export async function run(argv: string[]): Promise<Json> {
     if (positionals.length !== 2) throw new UsageError("Usage: herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]");
     return promptAndFinish(positionals[0]!, null, positionals[1]!, common(flags), {});
   }
-  const { positionals, flags, nativeArgs } = parseArgs(argv, ["--kind", "--timeout", "--tab", "--workspace", "--direction", "--cwd", "--start-timeout", "--lines", "--confirm-interval"]);
-  if (positionals.length !== 2 || !flags.get("--kind")) throw new UsageError("Usage: herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID] [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N] -- [agent args]");
+  const { positionals, flags, nativeArgs } = parseArgs(argv, ["--kind", "--timeout", "--tab", "--workspace", "--new-tab", "--direction", "--cwd", "--start-timeout", "--lines", "--confirm-interval"]);
+  if (positionals.length !== 2 || !flags.get("--kind")) throw new UsageError("Usage: herdr-delegate NAME BRIEF --kind KIND [--timeout MS] [--tab ID | --workspace ID | --new-tab LABEL] [--direction right|down] [--cwd DIR] [--start-timeout MS] [--lines N] -- [agent args]");
   const direction = flags.get("--direction") ?? "right";
   if (direction !== "right" && direction !== "down") throw new UsageError("--direction must be right or down");
-  const tab = flags.get("--tab") ?? null, workspace = flags.get("--workspace") ?? null;
-  if (tab !== null && workspace !== null) throw new UsageError("--tab and --workspace are mutually exclusive");
-  return startFresh({ ...common(flags), name: positionals[0]!, prompt: positionals[1]!, kind: flags.get("--kind")!, direction, cwd: flags.get("--cwd") ?? process.cwd(), tab, workspace, startTimeoutMs: integer(flags, "--start-timeout", 30_000)!, nativeArgs });
+  const tab = flags.get("--tab") ?? null, workspace = flags.get("--workspace") ?? null, newTab = flags.get("--new-tab") ?? null;
+  if ([tab, workspace, newTab].filter((value) => value !== null).length > 1) throw new UsageError("--tab, --workspace, and --new-tab are mutually exclusive");
+  if (newTab === "") throw new UsageError("--new-tab requires a non-empty label");
+  if (newTab !== null && !process.env.HERDR_WORKSPACE_ID) throw new UsageError("--new-tab requires HERDR_WORKSPACE_ID");
+  return startFresh({ ...common(flags), name: positionals[0]!, prompt: positionals[1]!, kind: flags.get("--kind")!, direction, cwd: flags.get("--cwd") ?? process.cwd(), tab, workspace, newTab, startTimeoutMs: integer(flags, "--start-timeout", 30_000)!, nativeArgs });
 }
 
 if (import.meta.main) {

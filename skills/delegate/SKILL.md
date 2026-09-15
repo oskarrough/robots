@@ -11,7 +11,7 @@ Pick the model from [models](references/models.md) before every spawn.
 
 **Fresh worker, one call.** The envelope *is* the result: handles, the resolved runtime, the worker's final message from its transcript in `last_message`, and its visible screen in `terminal_text` (viewport-sized: cut to pane width and height, so the statusline truncates):
 
-    herdr-delegate NAME 'BRIEF' --kind <kind> --timeout <ms> [--workspace <id>|--tab <workertab>] -- <agent args from models.md>
+    herdr-delegate NAME 'BRIEF' --kind <kind> --timeout <ms> [--new-tab workers|--workspace <id>|--tab <workertab>] -- <agent args from models.md>
 
 The wrapper appends the reporting contract and verifies the resolved provider/model/thinking against the requested args before prompting (pi and claude). A `herdr_delegate_runtime_mismatch` at `stage: "verify"` means the worker started on the wrong runtime: close that pane and start over, don't brief it.
 
@@ -27,7 +27,7 @@ Budget more than the 20-second confirmation interval for each `wait` (e.g. `--ti
 Both confirm the settle from the worker's transcript, so `last_message` is the report and `classification` says `report`, `blocked`, `error`, `empty`, or `never_ran`. Never raw `agent wait --until done` (misses `idle`), and never move a pane during a live wait. Reset with `herdr agent prompt NAME "/new" --wait --timeout 15000` before unrelated work; it may report `agent_prompt_stalled` while succeeding.
 
 - Names: unique, ≤3 plain words, `[a-z][a-z0-9_-]{0,31}`; address workers by name. The wrapper gives each worker your pane ID for reports. Check `agent list` first; your own pane is in it too.
-- Keep workers out of the human's tab: `herdr tab create --workspace $HERDR_WORKSPACE_ID --label workers --no-focus | jq -r .result.tab.tab_id`, pass that as `--tab`. Four workers per tab at most. The tab closes itself when its last pane closes, so after closing a batch create a new tab before the next spawn — a stale `--tab` fails at `stage: "move"` after the pane is already created, in the human's tab (`pane move <id> --new-tab --label workers --no-focus` rescues it).
+- Keep workers out of the human's tab: give the first worker `--new-tab workers`, then give later workers that returned tab ID with `--tab`. Do not run `tab create` first: it necessarily creates a shell pane, so moving a worker into it leaves that empty pane beside the worker. Four workers per tab at most. The tab closes itself when its last pane closes, so after closing a batch use `--new-tab` again — a stale `--tab` fails at `stage: "move"` after the pane is already created, in the human's tab (`pane move <id> --new-tab --label workers --no-focus` rescues it).
 - Crew: reuse ~4 warm workers for batches; parallelize disjoint files; give a cascading sweep one owner. `pane close` only panes you created.
 
 ## Brief
