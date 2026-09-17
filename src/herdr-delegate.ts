@@ -26,7 +26,9 @@ const PROMPT_GATE_MS = 30_000;
 /** [herdr bug] `agent start` can race the shell in a fresh split and return `agent_pane_busy`. */
 const START_BUSY_BACKOFF_MS = 5_000;
 /** Herdr registers `agent_session` asynchronously after start, so an immediate read can miss it. */
-const RUNTIME_VERIFY_BACKOFF_MS = [500, 1_000, 2_000] as const;
+const RUNTIME_VERIFY_BACKOFF_MS = [500, 1_000, 2_000, 4_000, 4_000] as const;
+/** A worker that ended its turn on its contract line is settled by definition; no confirmation interval. */
+const CONTRACT_LINE = /^\s*\[worker [a-z][a-z0-9_-]{0,31}\]\s*(?:DONE|BLOCKED):/m;
 const PI_REASONING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
 const emptyRuntime = (): RuntimeValues => ({ provider: null, model: null, reasoning_level: null });
 const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -36,7 +38,7 @@ const upstream = (e: unknown): Json => e instanceof HerdrError ? e.upstream : { 
 
 /** Reporting contract appended to every fresh brief so results travel back without polling. */
 export const workerContract = (worker: string, delegator: string): string =>
-  `Your delegator is Herdr pane \`${delegator}\`. If you need help, send \`BLOCKED ${worker}: <question>\` to them with \`herdr agent prompt ${delegator} '<message>'\` (no \`--wait\`), then end your turn with the same line. When finished, send \`DONE ${worker}: <concise report>\` the same way, then end with that report. If you did nothing, say why.`;
+  `Your delegator is Herdr pane \`${delegator}\`. You are worker \`${worker}\`; every message you send them starts with \`[worker ${worker}]\` so it is not mistaken for the human. If you need help, send \`[worker ${worker}] BLOCKED: <question>\` with \`herdr agent prompt ${delegator} '<message>'\` (no \`--wait\`), then end your turn with the same line. When finished, send \`[worker ${worker}] DONE: <concise report>\` the same way, then end with that report. If you did nothing, say why.`;
 
 // ---- herdr calls ---------------------------------------------------------------------------
 
@@ -243,6 +245,7 @@ async function settle(name: string, kind: string | null, opts: Common, deadline:
     }
     const left = deadline === null ? Infinity : Math.max(0, deadline - Date.now());
     if (!isSettled(first)) { await Bun.sleep(Math.min(1_000, left)); continue; }
+    if (first.transcript.turn_ended === true && CONTRACT_LINE.test(first.transcript.last_message ?? "")) return { kind: "settled", observation: first };
     await Bun.sleep(Math.min(opts.confirmIntervalMs, left));
     if (deadline !== null && Date.now() >= deadline) return { kind: "timed_out" };
     const second = await observe(name, kind);
@@ -255,7 +258,7 @@ async function settle(name: string, kind: string | null, opts: Common, deadline:
  * assistant text, e.g. a quota refusal. Both are `ok: false` so a silent failure never reads as a report. */
 function classify(o: Observation): "blocked" | "error" | "empty" | "report" {
   const { transcript: t } = o;
-  if (o.agent.status === "blocked" || /^\s*BLOCKED(?:\s+[a-z][a-z0-9_-]{0,31})?:/m.test(t.last_message ?? "")) return "blocked";
+  if (o.agent.status === "blocked" || /^\s*(?:\[worker [a-z][a-z0-9_-]{0,31}\]\s*)?BLOCKED(?:\s+[a-z][a-z0-9_-]{0,31})?:/m.test(t.last_message ?? "")) return "blocked";
   if (t.available && t.stop === "error") return "error";
   if (t.available && t.last_message === null) return "empty";
   return "report";

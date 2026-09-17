@@ -49,7 +49,7 @@ runtime?, classification?, last_message?, terminal_text?, error?}`. `last_messag
 final assistant text from the transcript; `terminal_text` is the visible
 viewport (`--lines`, default 120), truncated to pane width. `classification`
 is `report` (ok), `blocked` (Herdr `blocked` or a final line starting
-`BLOCKED <worker>:`), `error` (the provider ended the turn), `empty` (a turn with
+`[worker <name>] BLOCKED:`), `error` (the provider ended the turn), `empty` (a turn with
 no assistant text), or `never_ran` (a prompt rejected with Herdr's
 `agent_prompt_stalled`, `agent_not_found`, or `agent_not_running`). A prompt
 or wait `timeout` is `ok: false` at `stage: prompt` or `stage: wait`; the worker
