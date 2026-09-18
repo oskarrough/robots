@@ -15,16 +15,19 @@ Herdr session (`HERDR_ENV=1`). Install it from this checkout with `bun link`.
     herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]
     herdr-delegate wait NAME [--timeout MS] [--lines N] [--confirm-interval MS]
 
-The fresh form runs `agent list` → `pane split` → `agent start` (one retry on
-`agent_pane_busy`) → runtime verification → optional `pane move` → a brief with
-the upward-reporting contract appended → `agent prompt --wait` → a confirmed settle →
-`agent read`. `prompt` does the same from the prompt step for a warm worker
+The fresh form runs `agent list` → `pane split` → `pane rename` → `agent start`
+(one retry on `agent_pane_busy`) → runtime verification → optional `pane move` → a
+brief with the upward-reporting contract appended → `agent prompt --wait` → a
+confirmed settle → `agent read`. The worker's pane is renamed to `NAME` before the
+agent starts, so the pane border and the sidebar's `pane` token carry the worker
+identity even if the agent fails to start or later exits; the agent name stays the
+CLI handle. `prompt` does the same from the prompt step for a warm worker
 (without repeating the contract); `wait` from the settle step, e.g. after a
-timeout. `--workspace` takes a workspace id or unique label and resolves to its
-active tab. `--new-tab LABEL` moves the worker into a new one-pane tab in the
-caller's workspace; unlike `tab create` followed by `--tab`, it does not leave an
-empty root shell. The three placement options are mutually exclusive. Use Herdr
-itself to steer, move, read, or close workers. Nothing is ever closed.
+timeout. `--workspace` takes a workspace id or unique label and resolves
+to its active tab. `--new-tab LABEL` moves the worker into a new one-pane tab in
+the caller's workspace; unlike `tab create` followed by `--tab`, it does not leave
+an empty root shell. The three placement options are mutually exclusive. Use
+Herdr itself to steer, move, read, or close workers. Nothing is ever closed.
 
 A settle is confirmed from the worker's transcript, not its screen. The
 session file Herdr points at (`agent_session`; pi/omp paths, Claude ids, and

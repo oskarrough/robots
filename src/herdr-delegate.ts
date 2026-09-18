@@ -4,7 +4,7 @@
 //   herdr-delegate prompt NAME TEXT [--timeout MS] [--lines N]
 //   herdr-delegate wait NAME [--timeout MS] [--lines N] [--confirm-interval MS]
 // A settle is confirmed from the worker's transcript (herdr's `agent_session`), not the screen.
-// The fresh form appends the worker contracts to the brief and verifies the started runtime before prompting.
+// The fresh form appends the worker contracts to the brief, names the worker's pane, and verifies the started runtime before prompting.
 
 type Json = Record<string, unknown>;
 type Agent = { name: string; kind: string | null; pane_id: string | null; tab_id: string | null; workspace_id: string | null; status: string | null };
@@ -328,6 +328,10 @@ async function startFresh(cmd: Fresh): Promise<Json> {
   try { pane = (await callHerdrJson(["pane", "split", "--current", "--direction", cmd.direction, "--cwd", cmd.cwd, "--no-focus"])).pane as Json; }
   catch (error) { return fail("split", error); }
   const paneId = String(pane.pane_id);
+  // The pane label is the worker's durable identity: it outlives the agent alias.
+  // Name the pane before `agent start` so a failed start still leaves an identifiable pane.
+  try { await callHerdrJson(["pane", "rename", paneId, cmd.name]); }
+  catch (error) { return fail("rename", error, { pane_id: paneId, terminal_text: await readTerminal(paneId, cmd.lines) }); }
   const startArgs = ["agent", "start", cmd.name, "--kind", cmd.kind, "--pane", paneId, "--timeout", String(cmd.startTimeoutMs), "--", ...cmd.nativeArgs];
   try {
     try { await callHerdrJson(startArgs); }
