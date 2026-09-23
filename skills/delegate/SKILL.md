@@ -7,11 +7,11 @@ Delegate a task to a worker: another coding agent in its own `herdr` pane. You o
 
     herdr-delegate count-files 'Count the files in /home/osk/sites/robots, excluding .jj, .git and node_modules. One shell command. Do not edit anything, no commits. Report the number and the command you ran.' \
       --kind pi --timeout 30000 --new-tab workers \
-      -- --provider openrouter --model z-ai/glm-5.3-flash
+      -- --provider openai-codex --model gpt-6-luna
 
 That is the whole thing for a read-only task. Pick the `--kind … -- …` tail from [models](references/models.md) per task. Pass a short `--timeout` always; without one a hung worker hangs your shell. Give the first worker `--new-tab workers` and later ones the returned tab ID with `--tab`, four per tab. The tab closes with its last pane; then `--new-tab` again. For raw pane and agent commands, `herdr --skill`.
 
-The name is the worker's address: unique, at most three plain words, `[a-z][a-z0-9_-]{0,31}`. Check `agent list` first.
+The name is the worker's address: unique, at most three plain words, `[a-z][a-z0-9_-]{0,31}`. Check `herdr agent list` first.
 
 ## Messages, not waiting
 
@@ -34,7 +34,7 @@ One outcome, reviewable in one sitting. Inline every rule the worker needs; it d
 
 For a read-only task, the report is the answer. For edits, the diff is: read `jj diff` once instead of the report.
 
-If the diff is more than trivial, spawn a fresh worker on a strong model (see models) to review it. Give it the diff and the goal, not your opinion. Reproduce any blocker it finds in the current tree before acting on it; the first worker may already have fixed it. Act only on findings that reproduce or are likely in real use; constructed edge cases go in a "known edges" note. One review pass, then at most one fix round: don't loop review, fix, review on one area. Send rejected findings back to the reviewer with your reasoning. Before the commit, ask the implementing worker: "Reread your diff and cut anything not needed for the goal."
+If the diff is more than trivial, spawn a fresh worker on a review route from [models](references/models.md). Give it the diff and the goal, not your opinion. Reproduce any blocker it finds in the current tree before acting on it; the first worker may already have fixed it. Act only on findings that reproduce or are likely in real use; constructed edge cases go in a "known edges" note. One review pass, then at most one fix round: don't loop review, fix, review on one area. Send rejected findings back to the reviewer with your reasoning. Before the commit, ask the implementing worker: "Reread your diff and cut anything not needed for the goal."
 
 When done with a worker, `herdr pane close <pane_id>` using the id its spawn returned. Never close the pane it reports *to*; that is yours.
 
