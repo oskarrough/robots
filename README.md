@@ -105,6 +105,7 @@ SKILLS
 - [arbe-pipeline-audit](skills/pipeline-audit/SKILL.md) — walk README pipeline diagrams against code
 - [arbe-documentation](skills/documentation/SKILL.md) — Diátaxis four-mode docs
 - [arbe-orchestrate](skills/orchestrate/SKILL.md) — triage tasks/backlog and prep work for agent dispatch
+- [arbe-autobot](skills/autobot/SKILL.md) — take a signal (issue, Sentry, text) through triage, reproduce, fix, verify and PR; stops when blocked and before pushing
 - [arbe-delegate](skills/delegate/SKILL.md) — run worker agents in herdr panes: spawn, brief, read, steer
 - [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
 - [arbe-bro](skills/bro/SKILL.md) — restate the last message in plain human language

@@ -17,13 +17,15 @@ One call:
 bash recon.sh 7
 ```
 
-`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and the sites folder on its own, runs every source, and prints one section each: local repos (dirty, or touched inside the window), GitHub pushes across all machines, Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
+`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code`, `~/oskarrough` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: local repos (dirty, or touched inside the window), GitHub pushes across all machines, Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
 
 It fetches every remote before scanning, so it takes ~20s. That fetch is the whole point of the local section: without it, ahead/behind are measured against stale refs and *behind is invisible* — a repo six commits behind with a duplicate commit of its own reads as a clean one-commit push. Use `--no-fetch` only when offline, and say so in the sources line.
 
-Its output is the truth for this run. Don't re-check its findings with your own `ls`, `git status` or greps, and don't go looking for API keys. A source that prints "not reachable" is not reachable on this machine today, whatever other notes say about where a key or folder lives; report it in Stuck and carry on.
+Its output is the truth for this run, and the `## sources` block is the verdict on each source; copy it into the sources line. Don't re-check its findings with your own `ls`, `git status` or greps, and don't go looking for API keys. A source that prints "not reachable" or "BLIND" is not reachable on this machine today, whatever other notes say about where a key or folder lives; report it in Stuck and carry on.
 
-**An empty source is not a clean bill of health.** The local section prints `scanned: N repos`. If N is 0, or a source's heading is followed by nothing, that source is blind — it goes in the sources line as `empty` and in STUCK with a verb, never as `ok`. Only a source that returned rows may be called ok.
+Linear without a key is not a dead source. When the script says `linear: via connector`, read it through the Linear connector with the two queries it prints, and treat the result as the Linear section. It only goes in STUCK if the connector fails too.
+
+**An empty source is not a clean bill of health.** The script only says `ok` for local when it read at least one repo through a `git-overview` that speaks `--porcelain`; `partial` means no fetch, so behind-counts are unreliable. If a source says BLIND, or a heading is followed by nothing, that source is blind — it goes in the sources line as `empty` and in STUCK with a verb, never as `ok`. Only a source that returned rows may be called ok.
 
 If there's no bash (a Windows host without WSL), do the script's five sections by hand in the same order, one command each, and stop at the first failure per source.
 
@@ -49,7 +51,7 @@ Shape:
 
 ```
 PROJECT OVERVIEW                        2026-09-08  window 7d
-sources   local 55 repos   github ok   linear no key   vault ok
+sources   local 55 repos   github ok   linear mcp   vault ok
 ────────────────────────────────────────────────────────────
 FOCUS     31 Aug   Publix and Arbe.  Arbe moved. Publix didn't.
 
@@ -60,7 +62,6 @@ MOVING    project           last     seen        state
           llmlake           3 Sep    gh
 
 STUCK     what                        since      do
-          linear                      here       set LINEAR_API_KEY on this box
           OSK-291 Skat 2025           40d        finish or move to backlog
           radio4000/supabase  ↑1 ↓6   13d        reconcile: remote moved, may be a dup
           flerefugle/website  ↑4      7 mo       push or drop the branch

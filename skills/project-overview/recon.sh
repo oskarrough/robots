@@ -148,7 +148,7 @@ if [ -z "$KEY" ] && [ -f "$HOME/.config/fish/conf.d/secrets.fish" ]; then
   KEY=$(sed -nE "s/.*LINEAR_API_KEY[ =]+[\"']?([^\"' ]+).*/\\1/p" "$HOME/.config/fish/conf.d/secrets.fish" | head -1)
 fi
 if [ -z "$KEY" ]; then
-  echo "linear: not reachable (no LINEAR_API_KEY)"
+  echo "no key for the script. Read it through the Linear connector: team OSK, open issues matching \"$Q\"."
 else
   GQ='query($q: String!){ issues(first:20, orderBy:updatedAt, filter:{ team:{key:{eq:"OSK"}}, state:{type:{nin:["completed","canceled"]}}, or:[ {title:{containsIgnoreCase:$q}}, {description:{containsIgnoreCase:$q}}, {project:{name:{containsIgnoreCase:$q}}} ] }){ nodes{ identifier title updatedAt state{name} project{name} } } }'
   curl -s https://api.linear.app/graphql -H "Authorization: $KEY" -H 'Content-Type: application/json' \

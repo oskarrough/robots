@@ -19,7 +19,7 @@ the note (head and modified date), the note's wikilinks, URLs and backlinks, eve
 
 It fetches, so ahead/behind are real. `--no-fetch` when offline, and say so.
 
-Its output is the truth for this run. A source that says "not reachable" is not reachable here today. Say so in one line and carry on; don't go hunting for keys.
+Its output is the truth for this run. A source that says "not reachable" is not reachable here today. Say so in one line and carry on; don't go hunting for keys. Linear without a key is the exception: read it through the Linear connector with the query the script prints.
 
 If the note didn't match, the script lists other vault files mentioning the name. Pick the obvious one or ask. If the project has no note at all, say so; that's a finding.
 
