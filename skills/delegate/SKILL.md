@@ -15,7 +15,7 @@ The name is the worker's address: unique, at most three plain words, `[a-z][a-z0
 
 ## Messages, not waiting
 
-`herdr-delegate` tells every fresh worker to send `[worker <name>] BLOCKED: <question>` or `[worker <name>] DONE: <report>` to your pane and to end its turn with the same line. So spawn, then carry on with your own work; the message arrives as a prompt. Answer a `BLOCKED`, or give a warm worker its next task, by name:
+`herdr-delegate` tells every fresh worker to send `[worker <name>] BLOCKED: <question>` or `[worker <name>] DONE: <report>` to your pane and to end its turn with the same line. So spawn, then carry on with your own work; the message arrives as a prompt. Answer a `BLOCKED`, or follow up on the same outcome, by name. A new outcome gets a fresh worker: a warm worker fed task after task fills its context.
 
     herdr-delegate prompt NAME 'TEXT' --timeout <ms>
 
@@ -27,14 +27,14 @@ One outcome, reviewable in one sitting. Inline every rule the worker needs; it d
 
 - **Ownership:** files allowed and off-limits. Others are editing too; a needed change outside scope is a question, not permission.
 - **Done-when:** the project's scoped check command from the right directory. Never touch lockfiles or shared deps to fix an unrelated failure.
-- **Commits:** in a repo, supply `arbe-jj-jujutsu`, binding; outside one, say "no commits". Commit only owned files, one outcome per commit. Never rewrite history while others are active.
+- **Commits:** in a repo, supply `arbe-jj-jujutsu`, binding; outside one, say "no commits". Commit only owned files, one outcome per commit. Never rewrite history while others are active. Two workers touching one file commit in turn; neither commits the other's hunks.
 - **Report:** ≤10 plain lines: outcome, files/commits, check results, blockers. No subagents.
 
 ## Check and review
 
 For a read-only task, the report is the answer. For edits, the diff is: read `jj diff` once instead of the report.
 
-If the diff is more than trivial, spawn a fresh worker on a strong model (see models) to review it. Give it the diff and the goal, not your opinion. Reproduce any blocker it finds in the current tree before acting on it; the first worker may already have fixed it. Send rejected findings back to the reviewer with your reasoning. Before the commit, ask the implementing worker: "Reread your diff and cut anything not needed for the goal."
+If the diff is more than trivial, spawn a fresh worker on a strong model (see models) to review it. Give it the diff and the goal, not your opinion. Reproduce any blocker it finds in the current tree before acting on it; the first worker may already have fixed it. Act only on findings that reproduce or are likely in real use; constructed edge cases go in a "known edges" note. One review pass, then at most one fix round: don't loop review, fix, review on one area. Send rejected findings back to the reviewer with your reasoning. Before the commit, ask the implementing worker: "Reread your diff and cut anything not needed for the goal."
 
 When done with a worker, `herdr pane close <pane_id>` using the id its spawn returned. Never close the pane it reports *to*; that is yours.
 
