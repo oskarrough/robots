@@ -16,7 +16,7 @@ Fixes #<n>
 <The smallest view that explains the change, not a file-by-file changelog. Pick by what changed: logic → pseudocode, runtime flow → call tree, UI → component tree, layout → shallow file tree with each file's job. Use `diff` when the shape already existed, the whole block when it's mostly new. Keep only what the reviewer needs.>
 
 ## Try it
-<Steps to see it: the reproduction for a bug, where to look for a feature. Screenshots from verify, if any: GitHub has no upload API, so commit them to an orphan `autobot-assets` branch under `<slug>/` and embed them as images: `![before](https://github.com/<repo>/blob/autobot-assets/<slug>/<file>?raw=true)`.>
+<Steps to see it: the reproduction for a bug, where to look for a feature. Screenshots from verify, if any: reference them by local path, `![before](./before.png)`, and pass each to `gh pr create` with `--attach ./before.png`; gh uploads them and rewrites the links.>
 
 Checks: <what ran and passed>. <What wasn't checked.>
 ```
