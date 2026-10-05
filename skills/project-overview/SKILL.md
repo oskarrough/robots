@@ -15,7 +15,7 @@ bash recon.sh <project name>
 
 `recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine), then matches the name against `projects/*.md` by filename, `title:` and repo slug, loosely: "balance mender", "balancemender" and "Balance Mender" all land on the same note. Then it prints one section per source:
 
-the note (head and modified date), the note's wikilinks, URLs and backlinks, every local clone under `~/sites ~/Sites ~/code ~/oskarrough` whose origin matches a GitHub repo the note names (old repo names count, so a pre-rename clone still turns up), with fetch, ahead/behind, dirty files, jj changes not yet on trunk, and recent branches. Then GitHub (last push, commits, open PRs and issues, CI), the `url:` from the frontmatter with its HTTP status, open Linear issues mentioning the name, and mentions in `weekly.md`.
+the note (head and modified date), the note's wikilinks, URLs and backlinks, every local clone under `~/sites ~/Sites ~/code` whose origin matches a GitHub repo the note names (old repo names count, so a pre-rename clone still turns up), with fetch, ahead/behind, dirty files, jj changes not yet on trunk, and recent branches. Then GitHub (last push, commits, open PRs and issues, CI), the `url:` from the frontmatter with its HTTP status, open Linear issues mentioning the name, and mentions in `weekly.md`.
 
 It fetches, so ahead/behind are real. `--no-fetch` when offline, and say so.
 

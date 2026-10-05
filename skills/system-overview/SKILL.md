@@ -17,7 +17,7 @@ One call:
 bash recon.sh 7
 ```
 
-`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code`, `~/oskarrough` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: local repos (dirty, or touched inside the window), GitHub pushes across all machines, Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
+`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: local repos (dirty, or touched inside the window), GitHub pushes across all machines, Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
 
 It fetches every remote before scanning, so it takes ~20s. That fetch is the whole point of the local section: without it, ahead/behind are measured against stale refs and *behind is invisible* — a repo six commits behind with a duplicate commit of its own reads as a clean one-commit push. Use `--no-fetch` only when offline, and say so in the sources line.
 

@@ -12,7 +12,7 @@ done
 # The vault lives in a different place on every machine. NOTES_VAULT wins.
 VAULT="${NOTES_VAULT:-}"
 if [ -z "$VAULT" ]; then
-  for d in "$HOME/oskarrough/notes" "$HOME/Dropbox/notes" "$HOME/notes" /mnt/d/dropbox/notes; do
+  for d in "$HOME/sites/notes" "$HOME/Dropbox/notes" "$HOME/notes" /mnt/d/dropbox/notes; do
     [ -d "$d/projects" ] && VAULT=$(cd "$d" && pwd) && break
   done
 fi
@@ -74,7 +74,7 @@ fi
 # --- local ---------------------------------------------------------------------
 echo "## local clones on $(hostname)"
 found=""
-for root in "$HOME/sites" "$HOME/Sites" "$HOME/code" "$HOME/oskarrough"; do
+for root in "$HOME/sites" "$HOME/Sites" "$HOME/code"; do
   [ -d "$root" ] || continue
   for g in "$root"/*/.git "$root"/*/*/.git; do
     [ -e "$g" ] || continue
@@ -104,7 +104,7 @@ for root in "$HOME/sites" "$HOME/Sites" "$HOME/code" "$HOME/oskarrough"; do
     done
   done
 done
-[ -n "$found" ] || echo "not cloned on this machine (looked in ~/sites ~/Sites ~/code ~/oskarrough)"
+[ -n "$found" ] || echo "not cloned on this machine (looked in ~/sites ~/Sites ~/code)"
 echo
 
 # --- github --------------------------------------------------------------------

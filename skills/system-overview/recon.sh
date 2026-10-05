@@ -16,7 +16,7 @@ SINCE_DAY=${SINCE_ISO:0:10}
 # The vault lives in a different place on every machine. NOTES_VAULT wins.
 VAULT="${NOTES_VAULT:-}"
 if [ -z "$VAULT" ]; then
-  for d in "$HOME/oskarrough/notes" "$HOME/Dropbox/notes" "$HOME/notes" /mnt/d/dropbox/notes; do
+  for d in "$HOME/sites/notes" "$HOME/Dropbox/notes" "$HOME/notes" /mnt/d/dropbox/notes; do
     [ -d "$d/projects" ] && VAULT=$(cd "$d" && pwd) && break
   done
 fi
@@ -30,7 +30,7 @@ ROOTS=()
 if [ -n "${RECON_ROOTS:-}" ]; then
   IFS=: read -r -a cands <<< "$RECON_ROOTS"
 else
-  cands=("$HOME/sites" "$HOME/Sites" "$HOME/code" "$HOME/oskarrough")
+  cands=("$HOME/sites" "$HOME/Sites" "$HOME/code")
 fi
 seen_roots=" "
 for d in "${cands[@]}"; do
