@@ -8,6 +8,6 @@ Get to the reporter's state: their version or commit, their platform where you c
 
 A bug you hit on the way that isn't the reported one: open its own issue if you can show it, else note it in the report.
 
-If you tried it in a browser, screenshot what you saw, save it next to the report, and attach it to any comment you post (`gh issue comment --attach ./repro.png`, referenced as `![what I saw](./repro.png)`). A reporter believes a picture faster than a paragraph.
+If you tried it in a browser, screenshot what you saw.
 
-Keep any repro script next to the report, not in /tmp. Report: what you ran, what happened, and the exact reproduction steps. Fix starts from those.
+Before writing your section, close any browser or server you started (`agent-browser close`, kill what holds the port): a stray headless Chromium slows every other thread's tests. Keep any repro script next to the report, not in /tmp. Report: what you ran, what happened, and the exact reproduction steps. Fix starts from those.
