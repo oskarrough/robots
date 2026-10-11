@@ -18,5 +18,5 @@ Fixes #<n>
 ## Try it
 <Steps to see it: the reproduction for a bug, where to look for a feature.>
 
-Checks: <what ran and passed>. <What wasn't checked.>
+<Only a check that failed or didn't run, and why it wasn't fixed. Never list what passed.>
 ```
