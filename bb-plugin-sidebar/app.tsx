@@ -330,6 +330,16 @@ function SidebarList({ activeThreadId, onNavigate }: PluginThreadListProps) {
           <ThreadRows rows={flattenTree(group.roots, childrenOf, isCollapsed)} {...rowProps} />
         </Section>
       ))}
+      {groupBy === "machines" && (
+        <a
+          href="/settings/machines"
+          className="flex h-7 items-center gap-1 rounded-md px-2 text-xs text-sidebar-foreground/60 outline-none ring-sidebar-ring hover:text-sidebar-foreground focus-visible:ring-2"
+          onClick={() => onNavigate()}
+        >
+          <Icon name="Plus" className="size-3" aria-hidden />
+          Add machine
+        </a>
+      )}
     </div>
   );
 }
