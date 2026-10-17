@@ -100,11 +100,21 @@ else
   SRC_LOCAL="local: partial, $scanned repos in $roots_short (${GO_NOTE}no fetch, behind-counts unreliable)"
 fi
 
+# Seconds since an epoch, as "5 min", "3 h", "2 d", "3 wk", "4 mo".
+ago() {
+  local d=$(( NOW - $1 ))
+  if   [ $d -lt 3600 ];    then echo "$(( d/60 )) min"
+  elif [ $d -lt 86400 ];   then echo "$(( d/3600 )) h"
+  elif [ $d -lt 1209600 ]; then echo "$(( d/86400 )) d"
+  elif [ $d -lt 5184000 ]; then echo "$(( d/604800 )) wk"
+  else echo "$(( d/2592000 )) mo"; fi
+}
+
 # Verbs, not states. commit: uncommitted edits. push: commits on no remote.
 # pull: the remote moved on. push + pull together is "sync", the push will bounce.
 # Clean repos aren't listed; recent activity shows up under github.
 {
-echo "## this machine: $(hostname -s) (verb, repo, counts, last commit, uncommitted files)"
+echo "## this machine: $(uname -n | cut -d. -f1) (verb, repo, counts, last commit, edits last touched, uncommitted files)"
 while IFS='|' read -r root name branch state flags age epoch; do
   verbs=""
   case "$flags" in *M:*|*S:*|*U:*|*\?:*) verbs="commit" ;; esac
@@ -117,11 +127,15 @@ while IFS='|' read -r root name branch state flags age epoch; do
   # A vendored checkout only matters when it holds our own work.
   case "$name" in 3rdparty/*|thirdparty/*) [ "$verbs" = pull ] && continue ;; esac
   # Name what's uncommitted, so the row says what the commit would be.
-  files=""
+  # "touched" is the newest mtime among those files: is someone on it right now?
+  files=""; touched="-"
   case "$verbs" in commit*)
-    files=$(git -C "$root/$name" status --porcelain 2>/dev/null | cut -c4- | head -2 | tr '\n' ',' | sed 's/,$//; s/,/, /') ;;
+    changed=$(git -C "$root/$name" status --porcelain 2>/dev/null | cut -c4- | sed 's/.* -> //; s/^"//; s/"$//')
+    files=$(printf '%s\n' "$changed" | head -2 | tr '\n' ',' | sed 's/,$//; s/,/, /')
+    newest=$(printf '%s\n' "$changed" | head -200 | (cd "$root/$name" && xargs -d '\n' stat -c %Y 2>/dev/null || xargs stat -f %m 2>/dev/null) | sort -n | tail -1)
+    [ -n "$newest" ] && touched=$(ago "$newest") ;;
   esac
-  printf '%s\t%s\t%s\t%s\t%s\n' "$verbs" "$name" "$flags" "$age" "$files"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$verbs" "$name" "$flags" "$age" "$touched" "$files"
 done < "$ROWS" | sort -k1,1 | column -t -s $'\t'
 echo
 } >> "$OUT"

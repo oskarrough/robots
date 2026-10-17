@@ -42,16 +42,16 @@ A repo with thousands of modified files is tracked `node_modules`, not work. Cle
 
 ## 3. Present
 
-One fenced block tagged `text` (so nothing gets syntax-coloured), lines under 72 characters. The machine's to-do list comes first and takes most of the space. Everything else is a line or two underneath.
+One fenced block tagged `plaintext`, never `text`: bb's highlighter doesn't know `text`, guesses a language and paints "in" and "else" red. Lines under 72 characters. The machine's to-do list comes first and takes most of the space. Everything else is a line or two underneath.
 
-```text
+```plaintext
 OSK1                                         2026-10-19   7d
 sources  local 26   github ok   linear mcp   vault ok
 ────────────────────────────────────────────────────────────
-commit   notes         nuwacom notes; pull 14 first
-         dotfiles      fish and herdr config, 3 wk
-         slaytheweb    backend + splash, 5 mo
-push     sf-skipper    6 commits, 1 wk
+commit   notes         nuwacom notes, editing now; pull 14 first
+         dotfiles      fish and herdr config, sat 3 wk
+         slaytheweb    backend + splash, sat 5 mo
+push     sf-skipper    6 commits, unpushed 1 wk
 sync     supabase      ↑1 ↓6, compare before pushing
 pull     agent-ide arbe dodgethis r4-svelte kranoldplatz
 
@@ -67,7 +67,7 @@ Rules:
 
 Line one: hostname, today, window. Line two: each source, ok or why not in two words; local carries its repo count so an empty scan can't hide behind "ok".
 
-The to-do block: one row per repo, grouped by verb in the order commit, push, sync, pull. Each row says what the work is and how old, nothing else. All the `pull` repos go on one line with no detail. If there's nothing to do, write "nothing to do here" and move on.
+The to-do block: one row per repo, grouped by verb in the order commit, push, sync, pull. Each row says what the work is and how old, nothing else. A bare "3 min" reads as nothing, so the age always carries its meaning: for `commit`, the recon's touched column (newest edit) as "sat 3 wk", or "editing now" under an hour, which means another session is on it, so leave it be; for `push` and `sync`, the last commit as "unpushed 1 wk". Lockfile-only edits aren't work: put those repos on one `lockfiles` row with no detail. All the `pull` repos go on one line with no detail. If there's nothing to do, write "nothing to do here" and move on.
 
 `linear`: in-progress issues older than the window, oldest first, cap three. `active`: repos pushed in the window from any machine, merged per project, cap six; add "not cloned here" only if that matters. `focus`: the weekly entry's date and focus in a few words; "stale" if older than two weeks. Add a `drift` line only when something is declared and silent, or active and undeclared for weeks.
 
