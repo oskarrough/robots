@@ -17,7 +17,7 @@ One call:
 bash recon.sh 7
 ```
 
-`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: this machine's repos as verbs, GitHub pushes across all machines (forks excluded), Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
+`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: this machine's repos as verbs, third-party checkouts (`thirdparty/`, `3rdparty/`) holding local work, GitHub pushes across all machines (forks excluded), Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
 
 It fetches every remote of every repo first, so it takes ~20s. Without the fetch, behind is invisible. Use `--no-fetch` only when offline, and say so in the sources line.
 
@@ -55,6 +55,10 @@ push     sf-skipper    6 commits, unpushed 1 wk
 sync     supabase      ↑1 ↓6, compare before pushing
 pull     agent-ide arbe dodgethis r4-svelte kranoldplatz
 
+3rd party, not yours
+         loom          ↑703 ↓749, fork drift, delete folder?
+         mwc-sv        stray lockfile, delete folder?
+
 linear   OSK-291 Skat 2025, in progress 193d
          OSK-319 bookmarks, in progress 135d
 active   agent-ide arbe commandos robots   (all machines)
@@ -68,6 +72,8 @@ Rules:
 Line one: hostname, today, window. Line two: each source, ok or why not in two words; local carries its repo count so an empty scan can't hide behind "ok".
 
 The to-do block: one row per repo, grouped by verb in the order commit, push, sync, pull. Each row says what the work is and how old, nothing else. A bare "3 min" reads as nothing, so the age always carries its meaning: for `commit`, the recon's touched column (newest edit) as "sat 3 wk", or "editing now" under an hour, which means another session is on it, so leave it be; for `push` and `sync`, the last commit as "unpushed 1 wk". Lockfile-only edits aren't work: put those repos on one `lockfiles` row with no detail. All the `pull` repos go on one line with no detail. If there's nothing to do, write "nothing to do here" and move on.
+
+Third-party checkouts never mix into the to-do block. They get their own block under a `3rd party, not yours` header, one row each: what's local, how old, and a verdict, usually "delete folder?" since the upstream lives elsewhere. Leave the block out when the section says nothing.
 
 `linear`: in-progress issues older than the window, oldest first, cap three. `active`: repos pushed in the window from any machine, merged per project, cap six; add "not cloned here" only if that matters. `focus`: the weekly entry's date and focus in a few words; "stale" if older than two weeks. Add a `drift` line only when something is declared and silent, or active and undeclared for weeks.
 

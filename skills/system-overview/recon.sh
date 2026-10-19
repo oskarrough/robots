@@ -124,8 +124,9 @@ while IFS='|' read -r root name branch state flags age epoch; do
     *↓*) verbs="${verbs:+$verbs+}pull" ;;
   esac
   [ -n "$verbs" ] || continue
-  # A vendored checkout only matters when it holds our own work.
-  case "$name" in 3rdparty/*|thirdparty/*) [ "$verbs" = pull ] && continue ;; esac
+  # A vendored checkout only matters when it holds our own work, and gets its own section.
+  tp=""
+  case "$name" in 3rdparty/*|thirdparty/*) [ "$verbs" = pull ] && continue; tp=1 ;; esac
   # Name what's uncommitted, so the row says what the commit would be.
   # "touched" is the newest mtime among those files: is someone on it right now?
   files=""; touched="-"
@@ -135,8 +136,13 @@ while IFS='|' read -r root name branch state flags age epoch; do
     newest=$(printf '%s\n' "$changed" | head -200 | (cd "$root/$name" && xargs -d '\n' stat -c %Y 2>/dev/null || xargs stat -f %m 2>/dev/null) | sort -n | tail -1)
     [ -n "$newest" ] && touched=$(ago "$newest") ;;
   esac
-  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$verbs" "$name" "$flags" "$age" "$touched" "$files"
+  row=$(printf '%s\t%s\t%s\t%s\t%s\t%s' "$verbs" "$name" "$flags" "$age" "$touched" "$files")
+  if [ -n "$tp" ]; then printf '%s\n' "$row" >> "$ROWS.tp"; else printf '%s\n' "$row"; fi
 done < "$ROWS" | sort -k1,1 | column -t -s $'\t'
+echo
+echo "## third party on this machine (vendored or forked checkouts holding local work)"
+if [ -s "$ROWS.tp" ]; then sort -k1,1 "$ROWS.tp" | column -t -s $'\t'; else echo "nothing"; fi
+rm -f "$ROWS.tp"
 echo
 } >> "$OUT"
 
