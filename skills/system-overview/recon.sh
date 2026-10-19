@@ -100,19 +100,28 @@ else
   SRC_LOCAL="local: partial, $scanned repos in $roots_short (${GO_NOTE}no fetch, behind-counts unreliable)"
 fi
 
+# Verbs, not states. commit: uncommitted edits. push: commits on no remote.
+# pull: the remote moved on. push + pull together is "sync", the push will bounce.
+# Clean repos aren't listed; recent activity shows up under github.
 {
-echo "## local repos (this machine only; dirty, or committed inside the window)"
+echo "## this machine: $(hostname -s) (verb, repo, counts, last commit, uncommitted files)"
 while IFS='|' read -r root name branch state flags age epoch; do
-  # A vendored checkout is only interesting when it holds OUR work (local edits
-  # or unpushed commits). Being thousands of commits behind upstream is normal.
-  case "$name" in 3rdparty/*|thirdparty/*)
-    case "$flags" in *M:*|*S:*|*U:*|*↑*) ;; *) continue ;; esac ;;
+  verbs=""
+  case "$flags" in *M:*|*S:*|*U:*|*\?:*) verbs="commit" ;; esac
+  case "$flags" in
+    *↑*↓*) verbs="${verbs:+$verbs+}sync" ;;
+    *↑*) verbs="${verbs:+$verbs+}push" ;;
+    *↓*) verbs="${verbs:+$verbs+}pull" ;;
   esac
-  commit=$(git -C "$root/$name" log -1 --format=%cr 2>/dev/null | sed 's/ ago//')
-  cepoch=$(git -C "$root/$name" log -1 --format=%ct 2>/dev/null || echo 0)
-  if [ "$state" = "dirty" ] || [ "${cepoch:-0}" -ge "$SINCE" ]; then
-    printf '%s\t%s\t%s\t%s\tlast commit %s\n' "$state" "${root##*/}/$name" "$branch" "${flags:--}" "${commit:-?}"
-  fi
+  [ -n "$verbs" ] || continue
+  # A vendored checkout only matters when it holds our own work.
+  case "$name" in 3rdparty/*|thirdparty/*) [ "$verbs" = pull ] && continue ;; esac
+  # Name what's uncommitted, so the row says what the commit would be.
+  files=""
+  case "$verbs" in commit*)
+    files=$(git -C "$root/$name" status --porcelain 2>/dev/null | cut -c4- | head -2 | tr '\n' ',' | sed 's/,$//; s/,/, /') ;;
+  esac
+  printf '%s\t%s\t%s\t%s\t%s\n' "$verbs" "$name" "$flags" "$age" "$files"
 done < "$ROWS" | sort -k1,1 | column -t -s $'\t'
 echo
 } >> "$OUT"
@@ -121,7 +130,7 @@ echo
 GH_OK=""
 command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && GH_OK=1
 GH=""
-[ -n "$GH_OK" ] && GH=$(gh repo list oskarrough --limit 100 --json name,pushedAt,description \
+[ -n "$GH_OK" ] && GH=$(gh repo list oskarrough --source --limit 100 --json name,pushedAt,description \
   --jq "map(select(.pushedAt >= \"$SINCE_ISO\")) | sort_by(.pushedAt) | reverse | .[] | \"\(.pushedAt[:10])  \(.name)  \(.description // \"\")\"")
 {
 echo "## github pushes since $SINCE_DAY (all machines)"
@@ -173,7 +182,7 @@ if [ -f "$VAULT/weekly.md" ]; then SRC_VAULT="vault: ok"; else SRC_VAULT="vault:
 # --- project notes -----------------------------------------------------------
 {
 echo "## project notes matching active repos (first 10 lines each)"
-names=$( { awk -F'|' -v s="$SINCE" '$4=="dirty" || $7>=s {print $2}' "$ROWS";
+names=$( { awk -F'|' -v s="$SINCE" '$5 ~ /[MSU?↑]/ || $7>=s {print $2}' "$ROWS";
            printf '%s\n' "$GH" | awk 'NF {print $2}'; } \
          | grep -v -E '^(notes|3rdparty|thirdparty)' | sort -u )
 found=0; seen=""

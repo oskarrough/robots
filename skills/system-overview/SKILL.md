@@ -1,13 +1,13 @@
 ---
 name: arbe-system-overview
-description: Overview of everything at once. Recon local repos, GitHub, Linear and the vault's project notes, then present one screen of what's moving, what's stuck, and what has drifted from the declared focus. Use when Oskar asks "where am I", "what's going on", "overview", or runs /system-overview. One project is arbe-project-overview; one machine's repos is the git-overview CLI.
+description: What needs doing on this machine (commit, push, pull, per repo), plus a few lines on Linear, activity across machines and the declared focus. One screen. Use when Oskar asks "where am I", "what's going on", "overview", or runs /system-overview. One project is arbe-project-overview; one machine's repos is the git-overview CLI.
 ---
 
 # System overview
 
-One screen. What's moving, what's stuck, what I said I'd focus on versus what I actually touched. Then one next step.
+One screen, one machine: what needs doing here, then the bigger picture in a few lines. Oskar is lazy and that's the design brief. If he has to decode it, it failed.
 
-Arguments: an optional window in days. Default 7. `/system-overview 30` widens it.
+Run it once per machine, one thread each. Arguments: an optional window in days. Default 7. `/system-overview 30` widens it.
 
 ## 1. Recon
 
@@ -17,83 +17,68 @@ One call:
 bash recon.sh 7
 ```
 
-`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: local repos (dirty, or touched inside the window), GitHub pushes across all machines, Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
+`recon.sh` lives next to this file. It finds the vault (`NOTES_VAULT`, else the usual paths per machine) and every repo root on its own (`RECON_ROOTS`, colon-separated, else each of `~/sites`, `~/Sites`, `~/code` that holds repos), runs every source, and prints a `## sources` verdict first, then one section each: this machine's repos as verbs, GitHub pushes across all machines (forks excluded), Linear issues for team OSK, the last log entry from `weekly.md`, and the head of each `projects/` note matching an active repo.
 
-It fetches every remote before scanning, so it takes ~20s. That fetch is the whole point of the local section: without it, ahead/behind are measured against stale refs and *behind is invisible* — a repo six commits behind with a duplicate commit of its own reads as a clean one-commit push. Use `--no-fetch` only when offline, and say so in the sources line.
+It fetches every remote of every repo first, so it takes ~20s. Without the fetch, behind is invisible. Use `--no-fetch` only when offline, and say so in the sources line.
 
-Its output is the truth for this run, and the `## sources` block is the verdict on each source; copy it into the sources line. Don't re-check its findings with your own `ls`, `git status` or greps, and don't go looking for API keys. A source that prints "not reachable" or "BLIND" is not reachable on this machine today, whatever other notes say about where a key or folder lives; report it in Stuck and carry on.
+Its output is the truth for this run, and the `## sources` block is the verdict on each source. Don't re-check its findings with your own `ls`, `git status` or greps, and don't go looking for API keys. A source that prints "not reachable" or "BLIND" is blind today; it goes on the sources line and you carry on.
 
-Linear without a key is not a dead source. When the script says `linear: via connector`, read it through the Linear connector with the two queries it prints, and treat the result as the Linear section. It only goes in STUCK if the connector fails too.
+Linear without a key is not a dead source. When the script says `linear: via connector`, read it through the Linear connector with the two queries it prints.
 
-**An empty source is not a clean bill of health.** The script only says `ok` for local when it read at least one repo through a `git-overview` that speaks `--porcelain`; `partial` means no fetch, so behind-counts are unreliable. If a source says BLIND, or a heading is followed by nothing, that source is blind — it goes in the sources line as `empty` and in STUCK with a verb, never as `ok`. Only a source that returned rows may be called ok.
+An empty source is not a clean bill of health. Only a source that returned rows may be called ok.
 
-If there's no bash (a Windows host without WSL), do the script's five sections by hand in the same order, one command each, and stop at the first failure per source.
+If there's no bash (a Windows host without WSL), do the script's sections by hand in the same order, one command each.
 
-## 2. Cross-reference
+## 2. The verbs
 
-This is the part that earns the skill. Raw lists I can get myself.
+The local section already speaks in verbs. Never say "dirty".
 
-Declared focus from the weekly entry versus observed activity from git, GitHub and Linear. Something declared but untouched in the window is drifting. Something active but never declared is either a distraction or a focus that hasn't been written down yet. Say which, or ask.
+- `commit`: uncommitted edits. The row names the files; turn that into what the commit would be, in a few words ("nuwacom notes", "fish config").
+- `push`: commits that are on no remote at all. Your work, on this machine only.
+- `pull`: the remote moved on. Not a chore unless you're about to work there.
+- `sync`: both. The push will bounce, and the commit may already exist upstream under another name. Compare before touching either.
 
-Dirty or unpushed repos are loose ends. Name them with the change count and the age of the last commit. A repo with thousands of modified files is tracked `node_modules`, not work; say so in five words and move on.
-
-**↑ and ↓ are different problems and never share a row's verdict.** ↑ is your own work, on this machine only, unbackuped — it goes in STUCK with "push". ↓ is just a stale checkout — worth a "pull" only if you're about to work there. **↑ together with ↓ is the dangerous one:** you have local commits *and* the remote has moved, so the push will be rejected and your commit may already exist upstream under another name. That row's verb is "reconcile", not "push", and the next step is to compare the two before touching either.
-
-Local state is one machine's view. A repo can be clean here and dirty on the laptop. GitHub is the cross-machine truth for what moved; local is the truth for what's messy here.
-
-Gaps between sources. A repo with recent pushes but no `projects/` note. A `projects/` note whose repo hasn't moved in a year. A Linear project with open issues and no commits. One line each, only if worth acting on.
+A repo with thousands of modified files is tracked `node_modules`, not work. Clean repos aren't listed and don't appear.
 
 ## 3. Present
 
-One screen, one fenced code block, fixed width so the columns hold. Think 1970s IBM print: a grid, uppercase labels, one rule, numbers aligned, no ornament. Plain words inside the grid. No `- **Label:** text` lists, no emoji, no headers outside the block.
+One fenced block tagged `text` (so nothing gets syntax-coloured), lines under 72 characters. The machine's to-do list comes first and takes most of the space. Everything else is a line or two underneath.
 
-Shape:
-
-```
-PROJECT OVERVIEW                        2026-09-08  window 7d
-sources   local 55 repos   github ok   linear mcp   vault ok
+```text
+OSK1                                         2026-10-19   7d
+sources  local 26   github ok   linear mcp   vault ok
 ────────────────────────────────────────────────────────────
-FOCUS     31 Aug   Publix and Arbe.  Arbe moved. Publix didn't.
+commit   notes         nuwacom notes; pull 14 first
+         dotfiles      fish and herdr config, 3 wk
+         slaytheweb    backend + splash, 5 mo
+push     sf-skipper    6 commits, 1 wk
+sync     supabase      ↑1 ↓6, compare before pushing
+pull     agent-ide arbe dodgethis r4-svelte kranoldplatz
 
-MOVING    project           last     seen        state
-          arbe              today    gh local    clean, pushed
-          dodgethis         today    gh local    1 file dirty
-          kant              today    gh          not cloned here
-          llmlake           3 Sep    gh
+linear   OSK-291 Skat 2025, in progress 193d
+         OSK-319 bookmarks, in progress 135d
+active   agent-ide arbe commandos robots   (all machines)
+focus    3 Oct, none named
 
-STUCK     what                        since      do
-          OSK-291 Skat 2025           40d        finish or move to backlog
-          radio4000/supabase  ↑1 ↓6   13d        reconcile: remote moved, may be a dup
-          flerefugle/website  ↑4      7 mo       push or drop the branch
-          radio4000/cli       ↓19     9 mo       pull or archive
-          discord-mini        ↑1      6 mo       push; untrack node_modules
-
-DRIFTING  publix              declared 31 Aug, silent since 13 Aug
-          kant sctv skrivebord robots  active, never declared
-
-NEXT      fill the 31 Aug scoreboard, then say whether the focus is still Publix and Arbe.
+next     commit the nuwacom notes, then name a focus for the week.
 ```
 
-Rules for the grid:
+Rules:
 
-Line one: title, today, window. Line two: each source with ok or the reason it isn't, two words at most — and for local, the repo count (`local 55 repos`), so an empty scan cannot hide behind the word ok. The rule is one line of box-drawing dashes.
+Line one: hostname, today, window. Line two: each source, ok or why not in two words; local carries its repo count so an empty scan can't hide behind "ok".
 
-FOCUS is the weekly entry's focus with its date, then a verdict of a few words. If the entry is older than two weeks, the verdict is "stale".
+The to-do block: one row per repo, grouped by verb in the order commit, push, sync, pull. Each row says what the work is and how old, nothing else. All the `pull` repos go on one line with no detail. If there's nothing to do, write "nothing to do here" and move on.
 
-MOVING is a table, most recent first, cap seven. `last` is the most recent push or commit. `seen` lists the sources that saw it: gh, local, linear. `state` is a few words or blank. Merge repos that belong to one project on one row.
+`linear`: in-progress issues older than the window, oldest first, cap three. `active`: repos pushed in the window from any machine, merged per project, cap six; add "not cloned here" only if that matters. `focus`: the weekly entry's date and focus in a few words; "stale" if older than two weeks. Add a `drift` line only when something is declared and silent, or active and undeclared for weeks.
 
-STUCK is the actionable list. Every row ends with a verb in the `do` column. Sources that couldn't be read come first, because they blind the overview. Then Linear issues in progress longer than the window, then unpushed or behind branches, then dirty repos worth naming. Skip debris that isn't worth a verb.
+`next` is one sentence: the single thing worth doing first.
 
-DRIFTING is two kinds of row: declared with no activity, and active with no declaration. Name the projects, one short clause each.
-
-NEXT is one sentence. If the weekly entry is stale or its scoreboard is empty, that's the sentence.
-
-Dry wit is allowed in the verdict clauses, one line at most. The grid does the talking.
+Below the block, nothing. No recap, no offers.
 
 ## Don'ts
 
 Don't fake a source. Don't hunt for one either.
 
-Don't create or edit anything. Read only. If the overview surfaces something to fix, propose it as the next step.
+Don't create or edit anything. Read only. If the overview surfaces something to fix, it goes in `next`.
 
 Don't pad. If a section is empty, write "nothing" and move on.
