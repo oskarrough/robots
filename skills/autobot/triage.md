@@ -6,6 +6,8 @@ Split it into claims. One claim is one issue. For each extra claim, note in the 
 
 Label from intent alone: `bug` + `needs-repro`, or `enhancement`, or `question`. A change request with no chosen behaviour is a `question`: it goes to Oskar, not to fix. Add one domain label from the repo's existing labels (`gh label list`) if one clearly fits; never invent one. Add labels; don't remove ones a person set. Post them. When it's a `question` or too thin to act on, reply like a maintainer would: a line or two of open questions that get the discussion going, not a menu of options. A blocked `Next:` always has that reply behind it.
 
+When it needs another open issue done first, mark it blocked by that issue on GitHub (`gh api -X POST repos/<repo>/issues/<n>/dependencies/blocked_by -F issue_id=<the blocker's id from gh api>`), remove `autobot` and stop with `Next: triage once #<m> closes`. The link is the reply; don't comment. Never build on another issue's open branch.
+
 Fill every line of the template, `Next:` included. Report only what the signal says. Don't list what's missing unless the next step needs it, and don't restate these rules.
 
 ```
