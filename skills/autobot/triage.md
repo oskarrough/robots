@@ -1,6 +1,6 @@
 # Triage
 
-Read the signal, not the code (`gh issue view <n> --comments`, Sentry, pasted text). A signal without an issue gets one first: open it in the repo with the reporter's words quoted, then carry on with that issue as the signal.
+Read the signal, not the code (`gh issue view <n> --json title,body,author,createdAt,labels,comments`, Sentry, pasted text). A signal without an issue gets one first: open it in the repo with the reporter's words quoted, then carry on with that issue as the signal.
 
 Split it into claims. One claim is one issue. For each extra claim, note in the report whether it looks related. Reproduce decides for sure. If the reporter already calls a claim separate, open it as its own issue now.
 

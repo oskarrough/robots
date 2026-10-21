@@ -6,6 +6,6 @@ Use the repo's existing test tooling. If it can't catch this change (a pure layo
 
 When the change is tuned against a slow measurement (a benchmark, a simulation): take one baseline, probe with the cheapest run that answers the question, and stop after three tries. Keep the best and report what each try showed. If a result looks lopsided, rule out the measuring tool before tuning around it, and report whether you did. Wait on long commands in the foreground.
 
-Run the repo's checks. Leave the result uncommitted and save its diff as `fix.diff` next to the report.
+Run the repo's checks. Leave the result uncommitted in the worktree.
 
 Report: the cause (`file:line`) or the choices, what changed, and the test or measurement.
