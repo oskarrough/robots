@@ -13,7 +13,7 @@ Write one rules file all lanes read, and one brief per lane: its issues in order
 - No worktree, branch, commit, push or anything that rewrites history. Other lanes' half-done edits will show in the diff; leave them alone.
 - Reuse the running dev server; start it yourself once before spawning if it's down.
 - Run the repo's checks on your own files and the tests you touch. The parent runs the full suite.
-- A browser at most once per issue, with a named session, closed after, and only when a test can't show the change. Shader work wants a close-up, not a wide shot.
+- No browser and no benchmarks by default: the repo's checks and the tests you touch, then stop. The parent does one smoke run at the end if the batch needs it. Never reset a file to get a clean baseline: other lanes' edits live there too.
 - State the invariant the change must keep ("same tiles, byte for byte") and let the lane pick the method.
 - After each issue: write the `## Fix` section, `Next: verify`, end the turn, and wait for "go on". Starting the next issue early would leak into its commit.
 
