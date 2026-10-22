@@ -1,6 +1,6 @@
 # Verify
 
-Rerun the reproduction steps against the branch: is the bug gone? For a change request, check the claim. A change proven by measurement gets the cheapest rerun you can do yourself; fix's logs aren't evidence. Run the full checks. Review the diff with arbe-review. If the change is visible, run the app (serve a build if the dev server is off-limits) in Playwright or whatever browser the machine has, and look: save before and after screenshots next to the report. If you can't get a browser, that's a blocker.
+Rerun the reproduction steps against the branch: is the bug gone? For a change request, check the claim. A change proven by measurement gets the cheapest rerun you can do yourself; fix's logs aren't evidence. Run the full checks. Review the diff with arbe-review. If the change is visible, look once at the view the claim is about, at the zoom and setting a player would use, in whatever browser the machine has; reuse the running dev server or one fix already started. One before and one after screenshot next to the report. Don't tour every view: the diff review covers the rest. If you can't get a browser, that's a blocker.
 
 Before writing your section, close any browser or server you started (`agent-browser close`, kill what holds the port): a stray headless Chromium slows every other thread's tests.
 
