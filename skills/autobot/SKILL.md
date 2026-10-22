@@ -16,7 +16,7 @@ any:    question or not reproduced ─▶ blocked: asked on the issue
 blocked: replies on the issue ─▶ triage
 ```
 
-Steps: [triage](triage.md), [reproduce](reproduce.md), [fix](fix.md), [verify](verify.md), [pr](pr.md). A change request skips reproduce.
+Steps: [triage](triage.md), [reproduce](reproduce.md), [fix](fix.md), [verify](verify.md), [pr](pr.md). A change request skips reproduce. For a batch to land straight on the base branch from one shared checkout, without PRs, follow [lanes](lanes.md) instead of the worktree, verify-thread and pr parts below.
 
 Every signal goes through every step. Run steps back to back while the next one is clear. Stop only when a step is blocked. When verify passes, open the PR without asking.
 
