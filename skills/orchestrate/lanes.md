@@ -1,6 +1,6 @@
 # Lanes
 
-For a batch of signals that should land straight on the base branch, no PRs: Oskar asks for it ("in parallel, in this checkout"). Several fix threads share the main checkout; you verify and commit.
+Running an approved batch yourself, inside bb, when Oskar wants it to land straight on the base branch with no PRs ("in parallel, in this checkout"). Several fix threads share the main checkout; you verify and commit. Per issue, lanes follow arbe-autobot's step files (triage, fix, the report); the worktree, verify-thread and pr parts are replaced by what's below.
 
 ```
 signals ─▶ triage all ─▶ group into lanes by file ─▶ one fix thread per lane

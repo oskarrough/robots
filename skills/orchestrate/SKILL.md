@@ -9,7 +9,7 @@ description: Triage a backlog, design doc, or feature area into a dispatch plan 
 
 Things arrive — a bug report, a design doc, a stale backlog, a vague wish. For each one, work out what it really is, whether it is already tracked, whether it is worth doing now, and who should do it next. Hand back a dispatch plan the human can approve in a few minutes: decisions — not code, not a research report, not a design.
 
-You are not building or solving these tasks. You make each one safe to hand over: right status, real scope, no duplicates, dependencies wired, a sane order. Once the human approves, `arbe-delegate` launches the builders.
+You are not building or solving these tasks. You make each one safe to hand over: right status, real scope, no duplicates, dependencies wired, a sane order. Once the human approves, `arbe-delegate` launches the builders. To run an approved batch yourself in bb, landing straight on the base branch from one checkout, see [lanes](lanes.md).
 
 The one thing that must live in your context is judgement about this project — what matters this week, what is a distraction, which two items are secretly the same. Everything else gets delegated.
 
