@@ -1,6 +1,6 @@
 # PR
 
-The base is the branch AGENTS.md names, else the default branch. Work in the fix worktree. Fetch, put the change on `autobot/<slug>` on top of the base on the remote (`main@origin`), run the repo's checks, commit, push, and open the PR. Label the issue `fix-pending`. No agent attribution. If the push is blocked, give Oskar the exact command and stop. Then watch its checks to the end, deploy previews included (`gh pr checks <n> --watch`): red caused by the change goes back to fix; red only counts as not ours when the same check is red on the base's latest commit (`gh api repos/{owner}/{repo}/commits/<base>/check-runs`), not on other PRs; then name it in the closing comment.
+The base is the branch AGENTS.md names, else the default branch. Work in the fix worktree. Fetch, put the change on `autobot/<slug>` on top of the base on the remote (`main@origin`), run the repo's checks, commit, push, and open the PR. Swap the issue's state label for `fix-pending`. No agent attribution. If the push is blocked, give Oskar the exact command and stop. Then watch its checks to the end, deploy previews included (`gh pr checks <n> --watch`): red caused by the change goes back to fix; red only counts as not ours when the same check is red on the base's latest commit (`gh api repos/{owner}/{repo}/commits/<base>/check-runs`), not on other PRs; then name it in the closing comment.
 
 The description is for a reviewer who hasn't read the report. Keep to this shape:
 
