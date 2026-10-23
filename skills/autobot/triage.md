@@ -2,6 +2,8 @@
 
 Read the signal, not the code (`gh issue view <n> --json title,body,author,createdAt,labels,comments`, Sentry, pasted text). A signal without an issue gets one first: open it in the repo with the reporter's words quoted, then carry on with that issue as the signal.
 
+If it isn't feedback at all (spam, gibberish), label it `invalid`, close it as not planned (`gh issue close <n> --reason "not planned"`) without a comment, and stop with `Next: done`. If an open issue already asks for the same thing, label it `duplicate`, close it with `gh issue close <n> --duplicate-of <m>` and stop the same way. Either way it keeps `autobot`; reopening is a human's call.
+
 Split it into claims. One claim is one issue. For each extra claim, note in the report whether it looks related. Reproduce decides for sure. If the reporter already calls a claim separate, open it as its own issue now.
 
 Label from intent alone: `bug` + `needs-repro`, or `enhancement`, or `question`. A rerun that settles a `question` drops it. A change request with no chosen behaviour is a `question`: it goes to Oskar, not to fix. Add one domain label from the repo's existing labels (`gh label list`) if one clearly fits; never invent one. Add labels; don't remove ones a person set, except to swap the state label (see SKILL.md). Post them. When it's a `question` or too thin to act on, reply like a maintainer would: a line or two of open questions that get the discussion going, not a menu of options. A blocked `Next:` always has that reply behind it.

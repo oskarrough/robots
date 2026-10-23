@@ -8,6 +8,6 @@ Get to the reporter's state: their version or commit, their platform where you c
 
 A bug you hit on the way that isn't the reported one: open its own issue if you can show it, else note it in the report.
 
-If you tried it in a browser, screenshot what you saw.
+If you tried it in a browser, screenshot what you saw, for the report only; it helps fix see the bug.
 
 Before writing your section, close any browser or server you started (`agent-browser close`, kill what holds the port): a stray headless Chromium slows every other thread's tests. Keep any repro script next to the report, not in /tmp. Report: what you ran, what happened, and the exact reproduction steps. Fix starts from those.
