@@ -18,10 +18,10 @@ gh api --paginate repos/<repo>/issues --jq '.[]
   | select([.labels[].name] | index("autobot") | not)
   | "\(.number) \(.created_at)"'
 
-# (b) waiting on a question, a repro or another issue, updated within the lookback
+# (b) waiting on a question, a repro or another issue, or with a PR open, updated within the lookback
 since=$(date -u -d '-<lookback>' +%Y-%m-%dT%H:%M:%SZ)
 gh issue list -R <repo> --label autobot --limit 100 \
-  --search "label:question,needs-repro,blocked updated:>=$since" --json number,createdAt --jq '.[] | "\(.number) \(.createdAt)"'
+  --search "label:question,needs-repro,blocked,fix-pending updated:>=$since" --json number,createdAt --jq '.[] | "\(.number) \(.createdAt)"'
 
 # (c) blocked, and no blocker is still open
 gh api --paginate 'repos/<repo>/issues?labels=autobot,blocked' --jq '.[]

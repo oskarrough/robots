@@ -23,5 +23,5 @@ Labeled <labels>.
 Setup: <version, device, browser, steps> (bugs only)
 Comment: <link> (question or too thin only)
 Opened: <links to new issues> (if any)
-Next: <step>, or blocked on <the one open question>
+Next: <step>, or waiting on <the one open question>
 ```

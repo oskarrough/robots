@@ -4,4 +4,4 @@ Rerun the reproduction steps against the branch: is the bug gone? For a change r
 
 Before writing your section, close any browser or server you started (`agent-browser close`, kill what holds the port): a stray headless Chromium slows every other thread's tests.
 
-Fixed and nothing in the review that has to change → next is PR. Otherwise → back to fix, with what you saw and the findings; output that looks wrong (a column that doesn't count what its name says) goes back too, not explained away. After two rounds back to fix, stop: write `Next: blocked on <the one open question>` yourself, not another fix.
+Fixed and nothing in the review that has to change → next is PR. Otherwise → back to fix, with what you saw and the findings; output that looks wrong (a column that doesn't count what its name says) goes back too, not explained away. After two rounds back to fix, stop: write `Next: waiting on <the one open question>` yourself, not another fix.
