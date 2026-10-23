@@ -2,7 +2,7 @@
 
 Read the signal, not the code (`gh issue view <n> --json title,body,author,createdAt,labels,comments`, Sentry, pasted text). A signal without an issue gets one first: open it in the repo with the reporter's words quoted, then carry on with that issue as the signal.
 
-If it isn't feedback at all (spam, gibberish), label it `invalid`, close it as not planned (`gh issue close <n> --reason "not planned"`) without a comment, and stop with `Next: done`. If an open issue already asks for the same thing, label it `duplicate`, close it with `gh issue close <n> --duplicate-of <m>` and stop the same way. Either way it keeps `autobot`; reopening is a human's call.
+If it isn't feedback at all (spam, gibberish), label it `invalid`, close it as not planned (`gh issue close <n> --reason "not planned"`) without a comment, and stop with `Next: done`. If an open issue or open PR already asks for the same thing, label it `duplicate`, close it with `gh issue close <n> --duplicate-of <m>` (for a PR, close it as not planned with a 🤖 link to the PR) and stop the same way. Either way it keeps `autobot`; reopening is a human's call.
 
 Split it into claims. One claim is one issue. For each extra claim, note in the report whether it looks related. Reproduce decides for sure. If the reporter already calls a claim separate, open it as its own issue now.
 
