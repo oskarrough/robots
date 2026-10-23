@@ -8,4 +8,4 @@ When the change is tuned against a slow measurement (a benchmark, a simulation):
 
 Run the repo's checks. Leave the result uncommitted in the worktree.
 
-Report: the cause (`file:line`) or the choices, what changed, and the test or measurement.
+Report, in at most five lines: the cause (`file:line`) or the choices, what changed, and the test or measurement.

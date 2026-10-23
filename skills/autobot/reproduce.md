@@ -10,4 +10,4 @@ A bug you hit on the way that isn't the reported one: open its own issue if you 
 
 If you tried it in a browser, screenshot what you saw, for the report only; it helps fix see the bug.
 
-Before writing your section, close any browser or server you started (`agent-browser close`, kill what holds the port): a stray headless Chromium slows every other thread's tests. Keep any repro script next to the report, not in /tmp. Report: what you ran, what happened, and the exact reproduction steps. Fix starts from those.
+Before writing your section, close any browser or server you started (`agent-browser close`, kill what holds the port): a stray headless Chromium slows every other thread's tests. Keep any repro script next to the report, not in /tmp. Report, in at most five lines: the exact reproduction steps and what happened. Fix starts from those.
