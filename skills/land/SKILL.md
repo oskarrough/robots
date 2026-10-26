@@ -51,7 +51,7 @@ Keep each commit focused on one result. Use only the commands needed:
 - `jj absorb --from <source> --into '<approved-commits>' -- <files>` — let jj place small fixes in earlier approved commits. Review `jj op show -p` and check anything it left behind.
 - `jj split -r <id> -m "Sentence" -- <files>` — separate unrelated work in one commit.
 
-Check status before changing history. Name the change IDs and files explicitly; leave files unspecified only when the whole commit is approved. Always supply `-m` or squash `-u`, before `--`; don't open an editor or interactive picker. For paths with brackets, use jj's literal path syntax, e.g. `'cwd:"apps/www/src/routes/[id]/+page.svelte"'`.
+Check status before changing history. Name the change IDs and files explicitly; leave files unspecified only when the whole commit is approved. Always supply `-m` or squash `-u`, before `--`; don't open an editor or interactive picker. For paths with brackets, use jj's literal path syntax, e.g. `'cwd:"src/routes/[id]/+page.svelte"'`.
 
 After moving selected files, check what moved and what remains: jj can silently skip unmatched paths. After commit, check `jj show --stat -r @-`. Never discard others' edits or rewrite pushed commits. **Pushing a commit also pushes earlier commits it depends on.** Make sure work we're leaving out isn't among them. If separating work is unsafe or causes conflicts, stop and ask.
 
