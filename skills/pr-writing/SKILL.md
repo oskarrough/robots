@@ -1,11 +1,11 @@
 ---
 name: arbe-pr-writing
-description: How Oskar wants PR titles and descriptions written, in any repo. Use whenever you open or edit a pull request, or rewrite one after feedback. Only covers the title and body, not the code.
+description: Write clear, human PR titles and descriptions, in any repo. Use whenever you open or edit a pull request, or rewrite one after feedback. Only covers the title and body, not the code.
 ---
 
 # PR titles and descriptions
 
-Write the PR the way Oskar would if he had opened it himself: a person telling another person why this exists.
+Write the PR as if a person opened it to tell another person why it exists.
 
 ## Title
 
