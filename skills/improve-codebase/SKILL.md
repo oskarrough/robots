@@ -32,15 +32,27 @@ Use these exactly. Do not drift to "component / service / API / boundary."
 - One adapter = hypothetical seam. Two adapters = real seam. Don't introduce a port unless something actually varies across it.
 - Depth is a property of the interface, not the implementation. A deep module can be internally composed of small mockable parts — they just aren't part of the interface.
 
+### Smells that paid
+
+Found in real passes; look for these first.
+
+- The same try/catch at N sites (storage, JSON, a call that may be blocked): a two-function module hides the whole failure mode, and the next feature uses it instead of copying.
+- Two modules with the same choreography and the same `active()/shown()` interface (wasted and busted, open and close): one module, two callers.
+- A consumer parsing a string its producer built (`door.startsWith('E: ')`): the interface is a string where it should be a value.
+- A hub whose body grows a block per feature, with each feature's after-care (layers, culling, zoom, dispose) inline: a plug-in interface and a list.
+- A false positive to expect: N sites that each make a canvas texture with different flags. The knob test fails; leave it.
+
 ## Process
 
-### 1. Read domain language first
+### 1. Read the domain language, then measure
 
-Read the project's domain glossary (commonly `docs/vocabulary.md` or `CONTEXT.md`) and `docs/architecture.md` for the package graph. Skim `docs/adr/` entries in the area you'll touch, if present.
+Read whatever the repo keeps its vocabulary in: README, AGENTS.md, `docs/vocabulary.md`, `docs/architecture.md`, ADRs if any. Most repos only have a README, and its module list is the glossary.
 
-### 2. Spawn one Explore subagent
+Then measure before guessing: lines per file, import fan-in and fan-out, and churn. `git log --name-only --format= -150 | sort | uniq -c | sort -rn` says which files every change touches; a file in a third of all commits is where features collide, and that is a locality finding on its own. Also count which files change together with the hub.
 
-Do **not** explore inline — the subagent's brief is what produces a structured report. Use `subagent_type=Explore`.
+### 2. Explore
+
+Under about 20k lines, explore inline: an outline tool (`ast-grep outline`, `grep -n export`) per file, then read the hubs and the suspects whole. A subagent only rediscovers what step 1 gave you. Bigger than that, hand the walk to one subagent (in bb, a bb thread) with the brief below; either way the report has the shape in step 3.
 
 Build the brief from §Glossary + §Principles + the per-candidate schema in step 3, plus:
 
@@ -64,7 +76,9 @@ Distill the subagent's report into a numbered list. Per candidate:
 - Sketch — what the deepened module would own, in domain vocab. Do not propose interfaces yet.
 - Leverage / Locality / Test surface change
 
-Add the "already deep — preserve" section first, so cross-checks have something to reference. End with _"Which of these do you want to explore?"_ — do not start designing.
+Add the "already deep — preserve" section first, so cross-checks have something to reference.
+
+With a user in the chat, end with _"Which of these do you want to explore?"_ and do not start designing. Running on your own (a ticket, a scheduled run, a brief that says land what's safe), don't stop there: land the small, clearly-good ones with behaviour unchanged (one commit, lint and tests, one look if it draws), file each bigger one as an issue with the shape before and after, the deletion and knob test, and a label; stay out of files other workers are in.
 
 ### 4. Grilling loop (when user picks one)
 
