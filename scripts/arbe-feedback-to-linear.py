@@ -57,7 +57,7 @@ THREAD_TIMEOUT = 12 * 60  # the automation itself times out at 15m
 
 # bb runs a snapshot of this script, so the prompt is read from the repo on
 # every run: edits to it apply without refreshing the automation.
-PROMPT_FILE = Path.home() / "oskarrough/robots/scripts/arbe-feedback-to-linear.md"
+PROMPT_FILE = Path.home() / "sites/robots/scripts/arbe-feedback-to-linear.md"
 
 
 def ts(value: str) -> datetime:
