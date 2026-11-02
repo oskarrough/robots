@@ -55,9 +55,22 @@ MODEL = "claude-haiku-4-5-20251001"
 OVERLAP = timedelta(minutes=5)
 THREAD_TIMEOUT = 12 * 60  # the automation itself times out at 15m
 
-# bb runs a snapshot of this script, so the prompt is read from the repo on
-# every run: edits to it apply without refreshing the automation.
-PROMPT_FILE = Path.home() / "sites/robots/scripts/arbe-feedback-to-linear.md"
+# bb runs a snapshot copy of this script from its automation store, so the
+# prompt is read from the repo on every run: edits to it apply without
+# refreshing the automation. That also means __file__ points at the snapshot
+# rather than the checkout, so the checkout is looked up next to the script
+# first and then by the name of the repo under $HOME.
+PROMPT_FILE = next(
+    (
+        path
+        for path in (
+            Path(__file__).resolve().parent / "arbe-feedback-to-linear.md",
+            *sorted(Path.home().glob("*/robots/scripts/arbe-feedback-to-linear.md")),
+        )
+        if path.is_file()
+    ),
+    None,
+)
 
 
 def ts(value: str) -> datetime:
@@ -161,6 +174,8 @@ def main() -> None:
 
 
 def run() -> None:
+    if PROMPT_FILE is None:
+        sys.exit("Prompt file not found: looked next to the script and under ~/*/robots/scripts/")
     state = load_state()
     if state["pending"]:
         settle(state)
