@@ -1,6 +1,6 @@
 ---
 name: arbe-pr-writing
-description: Write clear, human PR titles and descriptions, in any repo. Use whenever you open or edit a pull request, or rewrite one after feedback. Only covers the title and body, not the code.
+description: Write clear, human PR titles, descriptions and commit messages, in any repo. Use whenever you open or edit a pull request, write a commit message, or rewrite one after feedback. Only covers the words, not the code.
 ---
 
 # PR titles and descriptions
@@ -19,6 +19,10 @@ Short and plain: what the PR does, in a few words. No prefixes, ticket numbers o
 - Leave out what the diff already shows: file-by-file bullets, version bumps, config details, ignored folders.
 - Leave out reassurance sections like "Nothing changes on deploy" or "Tests pass". Mention a risk or a manual step only if the reviewer has to act on it, and keep it to one line.
 - No headings, bold labels or checklists unless the repo's PR template asks for them.
+
+## Commit messages
+
+Same voice, shorter. The subject says what changed for the user, not how: "Search finds partial names", not "Swap exact match for prefix index". Add a body only when the why isn't obvious.
 
 ## Example
 

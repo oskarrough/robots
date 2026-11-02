@@ -31,7 +31,7 @@ To run a batch in one checkout with no PRs, see [lanes](lanes.md).
 
 ## Land
 
-Read the diff, not the report. Workers land their own work when the project allows it; you land the stragglers and fix a failed deploy forward. Done means live and in Oskar's hands.
+Read the diff, not the report. Workers land their own work when the project allows it; you land the stragglers with [arbe-land](../land/SKILL.md), already approved, and fix a failed deploy forward. Done means live and in Oskar's hands.
 
 ## Make it compound
 

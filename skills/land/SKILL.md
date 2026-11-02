@@ -5,22 +5,11 @@ description: Use when asked to organize pending repo changes or commit and push 
 
 # Land
 
-Read the repo's root `AGENTS.md` and the `arbe-jj-jujutsu` skill. For commit and PR titles and bodies, follow the `arbe-pr-writing` skill.
+Read the repo's root `AGENTS.md` and `arbe-jj-jujutsu`. Titles follow `arbe-pr-writing`.
 
-## 1. Propose first
+## 1. Propose
 
-Check uncommitted files, unpushed commits, bookmarks, and work on other branches. Read the changes and relevant task or worker notes. `main@origin` reflects the last fetch, not necessarily what's on the server now.
-
-Show **Before → Proposed after** commit lists, oldest first: current commit titles before, proposed titles after. Include uncommitted work under Before and anything left pending under After. Make combinations clear; explain only decisions that need context, not every command.
-
-Account for all pending work:
-
-- **Keep separate:** finished changes that do different things, including unrelated work.
-- **Combine:** follow-up fixes for the same work—not just changes to the same files.
-- **Leave pending:** unfinished work or anything we're not pushing. Keep it intact.
-- **Ask:** if it's unclear who owns the work, whether it's ready, or what it depends on. Suggest what to do.
-
-Example:
+Look at uncommitted files, unpushed commits, bookmarks and other branches. Show the commits before and after, oldest first:
 
 ```text
 Before:
@@ -35,41 +24,35 @@ Proposed after:
   Left pending: director-test edits
 ```
 
-End with: “Proceed with this grouping, then check and push main?”
+Keep finished changes that do different things separate. Combine follow-up fixes with what they fix. Leave unfinished work pending and intact. Ask when ownership or readiness is unclear, with a suggestion.
 
-**Wait for approval before edits, checks, fetches, history changes, or pushes.** Only do what was approved. If there's nothing to push, say so and stop.
+End with "Proceed with this grouping, then check and push main?" and wait. Do nothing before the answer: no edits, checks, fetches or pushes. Skip the wait only if Oskar already said to land this work (e.g. a lead running the loop); then the proposal goes in your report instead.
 
-## 2. Organize the commits
+## 2. Organize
 
-After approval, fetch `origin`, check again, and record the change IDs and remote main's commit hash. If new work appears or the plan changes, ask for approval again.
+Fetch, check again, and note remote main's hash. If anything new appeared, ask again.
 
-Keep each commit focused on one result. Use only the commands needed:
+- `jj commit -m "Sentence" -- <files>`
+- `jj describe -r <id> -m "Sentence"`
+- `jj squash --from <src> --into <dst> -u -- <files>`, newest first
+- `jj absorb --from <src> --into '<approved>' -- <files>`, then `jj op show -p`
+- `jj split -r <id> -m "Sentence" -- <files>`
 
-- `jj commit -m "Sentence" -- <files>` — commit a related group of uncommitted files.
-- `jj describe -r <id> -m "Sentence"` — update a commit's message.
-- `jj squash --from <source> --into <target> -u -- <files>` — combine follow-up fixes with their original commit, newest first.
-- `jj absorb --from <source> --into '<approved-commits>' -- <files>` — let jj place small fixes in earlier approved commits. Review `jj op show -p` and check anything it left behind.
-- `jj split -r <id> -m "Sentence" -- <files>` — separate unrelated work in one commit.
+Always pass `-m` or `-u`; never open an editor. Brackets in paths need `'cwd:"src/routes/[id]/+page.svelte"'`. jj silently skips unmatched paths, so check what moved (`jj show --stat -r @-`). Never discard others' edits or rewrite pushed commits. Pushing a commit pushes its ancestors too; make sure pending work isn't among them. If separating work is unsafe, stop and ask.
 
-Check status before changing history. Name the change IDs and files explicitly; leave files unspecified only when the whole commit is approved. Always supply `-m` or squash `-u`, before `--`; don't open an editor or interactive picker. For paths with brackets, use jj's literal path syntax, e.g. `'cwd:"src/routes/[id]/+page.svelte"'`.
+## 3. Check
 
-After moving selected files, check what moved and what remains: jj can silently skip unmatched paths. After commit, check `jj show --stat -r @-`. Never discard others' edits or rewrite pushed commits. **Pushing a commit also pushes earlier commits it depends on.** Make sure work we're leaving out isn't among them. If separating work is unsafe or causes conflicts, stop and ask.
+Review everything being pushed, not just this session's files. Run what AGENTS.md asks on exactly that code, without unfinished edits mixed in. Formatting and build fixes go in the commit they belong to.
 
-## 3. Check the changes to push
-
-Review everything being pushed, including earlier commits—not just this session's files. Follow `AGENTS.md` for the relevant checks, tests, generated files, tasks, changelog, and live testing. Check exactly the code we're pushing, without unfinished edits mixed in; agree on a safe way to do that if needed. Put formatting and build changes in the commit they belong to, then rerun affected checks.
-
-**At any blocker, report `blocked: <exact thing>` and stop.** Don't repair the environment, weaken checks, bypass safeguards, or make unapproved production writes just to finish.
+At any blocker, report `blocked: <exact thing>` and stop. Don't repair the environment, weaken checks or write to production to finish.
 
 ## 4. Push
 
-Fetch again. If someone updated remote main, review how to include their work and what to recheck before proceeding. Confirm the final commit includes current remote main and only approved changes beyond it. Record its commit hash, then:
+Fetch again. If remote main moved, work out what to recheck first. Then:
 
 ```sh
-jj bookmark set main -r <approved-change-id>
+jj bookmark set main -r <id>
 jj git push --remote origin --bookmark main
 ```
 
-Push only `main`; if the push is rejected, stop rather than override it. This starts production deployment.
-
-Finish briefly: what was pushed and anything pending or blocked. Follow the root deployment verification requirements before reporting completion; if the user asks not to wait, offer to watch it instead.
+Push only `main`; if it's rejected, stop. This deploys. Verify the deploy the way AGENTS.md says, then report in a line or two: what went out, what's pending or blocked.
