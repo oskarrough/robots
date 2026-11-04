@@ -147,6 +147,8 @@ Rebase only to **exclude** a commit from a chain (e.g. move `tyvomsxu` past the 
 
 Bookmarks replace git branches. `jj rebase -o main` (not `-d`, deprecated).
 
+In a colocated repo git always reports a detached HEAD; that's normal. To catch up with main, `jj git fetch`, then `jj new main` (or `jj rebase -o main` if `@` has changes).
+
 ```sh
 jj bookmark create feature-name
 jj git push --bookmark feature-name
