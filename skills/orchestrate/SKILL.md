@@ -1,6 +1,6 @@
 ---
 name: arbe-orchestrate
-description: Lead a project — turn Oskar's remarks, bugs and backlog into briefs, hand them to workers, judge what comes back, land it. The lead doesn't code. Use when Oskar asks to orchestrate, lead, triage, run the loop, or keeps sending feedback to act on; or on a loop `tick`. arbe-delegate runs the workers.
+description: Lead a project — turn Oskar's remarks, bugs and backlog into briefs, hand them to workers, judge what comes back, land it. The lead doesn't code. Use when Oskar asks to orchestrate, lead or triage, or keeps sending feedback to act on. arbe-delegate runs the workers.
 ---
 
 # Orchestrate
@@ -28,8 +28,6 @@ Taste is Oskar's. Ask with a pick ("my pick is 1"), one question at a time, and 
 One outcome per worker. Parallel workers never share a file; name the files to stay out of. Work that must ship together goes to one worker. A one-file edit you already understand is faster to do than to brief.
 
 To run a batch in one checkout with no PRs, see [lanes](lanes.md).
-
-To lead a repo's feedback loop (inkast to issues to autobot, on an hourly tick), see [loop](loop.md).
 
 ## Land
 

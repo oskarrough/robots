@@ -26,7 +26,7 @@ Proposed after:
 
 Keep finished changes that do different things separate. Combine follow-up fixes with what they fix. Leave unfinished work pending and intact. Ask when ownership or readiness is unclear, with a suggestion.
 
-End with "Proceed with this grouping, then check and push main?" and wait. Do nothing before the answer: no edits, checks, fetches or pushes. Skip the wait only if Oskar already said to land this work (e.g. a lead running the loop); then the proposal goes in your report instead.
+End with "Proceed with this grouping, then check and push main?" and wait. Do nothing before the answer: no edits, checks, fetches or pushes. Skip the wait only if Oskar already said to land this work (e.g. a lead told to land); then the proposal goes in your report instead.
 
 ## 2. Organize
 

@@ -1,6 +1,6 @@
 ---
 name: arbe-autobot
-description: Take one signal (a GitHub issue, a Sentry error, pasted text) through triage, reproduce, fix, verify and PR, step by step, the way Oskar would by hand. The issue carries the state; a report.md carries the detail between threads. Use for "autobot <signal>" or "autobot <step> <signal>".
+description: Take one signal (a GitHub issue, a Sentry error, pasted text) through triage, reproduce, fix, verify and PR, step by step, the way Oskar would by hand. The issue carries the state; a report.md carries the detail between threads. Without a signal, picks the issues that need a run and starts one thread each. Use for "autobot", "autobot <signal>", "autobot <step> <signal>" or "autobot friction".
 ---
 
 # Autobot
@@ -19,7 +19,7 @@ fix-pending: a comment after the last 🤖 one ─▶ fix on the PR's branch
 waiting on #m: #m closed ─▶ triage
 ```
 
-Steps: [triage](triage.md), [reproduce](reproduce.md), [fix](fix.md), [verify](verify.md), [pr](pr.md). A change request skips reproduce. Read a step's file only when you're about to run it; a run that stops at triage never opens the others.
+Steps: [triage](triage.md), [reproduce](reproduce.md), [fix](fix.md), [verify](verify.md), [pr](pr.md). A change request skips reproduce. Read a step's file only when you're about to run it; a run that stops at triage never opens the others. `autobot` with no signal runs [pick](pick.md) instead; `autobot friction` runs [friction](friction.md).
 
 Every signal goes through every step. Run steps back to back while the next one is clear. Stop only when a step has to wait on someone. When verify passes, open the PR without asking.
 
@@ -43,3 +43,18 @@ Then wait in the foreground without ending your turn: repeat `bb thread wait <id
 Labels, comments and new issues post live; they're cheap to undo. Comment only when a reader of the issue needs it: a question, a reproduction, and one closing comment. Every stop to wait, whichever step hits it, posts its one open question on the issue before the turn ends. The issue is the only place autobot asks, never Oskar's inbox. Every comment starts with "🤖 ". The closing comment comes once the PR is up: a sentence or two on what was wrong and what the PR changes, plus its link. Nothing posted lists checks that passed; name only one that failed and why it wasn't fixed. Keep every post shorter than feels natural. Once autobot picks an issue up, it carries an `autobot` label and never loses it; a reply on the issue is how someone asks for another run. `bug` and `enhancement` are type labels and stay. `question`, `needs-repro`, `blocked`, `confirmed` and `fix-pending` are state labels, one at a time: setting one removes the other. `blocked` goes only with a blocked-by link to another issue; anything a human has to answer is `question`. Create any of these the repo lacks. Opening a new issue is fine; deciding which goes first is Oskar's call. The report, `~/.cache/autobot/<repo>/<slug>/report.md` (slug: `<n>-<short-title>`, or a short title without an issue), hands the next step what it needs and nothing else. Its header holds the state once: title, link, models, environment, branch. Each step owns one section of at most five lines that answers one question: triage, what's asked; reproduce, how to see it; fix, what changed and why; verify, does it work and must anything change; pr, the link. When a skill rule or tool cost you time or was unclear, the section ends with `Friction: <skill file>: <what>`; otherwise leave it out. A rerun replaces its step's section instead of adding one; the history lives in the issue, the PR and git. Screenshots sit next to the report, the latest only; delete older ones. Only verify's before/after pair goes on the PR, never the issue; other screenshots stay in the report. `gh pr create` takes `--attach <absolute path>` per file. `Next:` stays the report's last line. The branch is `autobot/<slug>`. The fix worktree is a plain git worktree, which jj can't open, so use git there even when the main checkout is jj. Only pr pushes. The repo's AGENTS.md wins where it disagrees with these files.
 
 Final chat: one or two sentences with the outcome, the link and the next step. Everything else is in the report.
+
+## autobot.toml
+
+Settings live in `autobot.toml` in the repo root. Only `repo` is required.
+
+```toml
+repo = "owner/name"                                   # GitHub repo that gets the issues
+inbox = { inkast = "x7k2q9mf", key = "~/.config/inkast/name.env", label = "player-feedback" }   # arbe-file-as-issues; omit without a feedback form
+bb = { project = "proj_abc123", machine = "hetzner-osk1" }   # where pick starts threads; `bb project list`
+orchestrator = "claude-code claude-sonnet-5-5 low"    # each autobot #n thread
+fix = "claude-code claude-opus-5-5 high"              # fix thread; omit to use the orchestrator's
+verify = "claude-code claude-opus-5-5 high"           # verify thread; omit likewise
+max_threads = 3                                       # autobot #n threads busy at once
+lookback = "2 hours"                                  # pick's schedule interval plus overlap
+```
