@@ -12,16 +12,17 @@ gh api --paginate repos/<repo>/issues --jq '.[]
   | select(.issue_dependencies_summary.blocked_by == 0)
   | select([.labels[].name] | index("autobot") | not)
   | "\(.number) \(.created_at)"'
-# (b)
+# (b) the last comment isn't autobot's own
 since=$(date -u -d '-<lookback>' +%Y-%m-%dT%H:%M:%SZ)
 gh issue list -R <repo> --label autobot --limit 100 \
-  --search "label:question,needs-repro,blocked,fix-pending updated:>=$since" --json number --jq '.[].number'
+  --search "label:question,needs-repro,blocked,fix-pending updated:>=$since" --json number,comments \
+  --jq '.[] | select(.comments | length > 0 and (last.body | startswith("🤖") | not)) | .number'
 # (c)
 gh api --paginate 'repos/<repo>/issues?labels=autobot,blocked' --jq '.[]
   | select(.issue_dependencies_summary.blocked_by == 0) | .number'
 ```
 
-(b) also catches autobot's own comments; that's fine, a run does nothing without a new reply. Skip issues whose `autobot #<n>` worker is still running (ask your harness the way [arbe-delegate](../delegate/SKILL.md)'s page says; its `: fix` and `: verify` workers don't count). Oldest first, until `max_threads` are running; the rest wait for the next run.
+(b) skips issues whose last comment starts with 🤖: a run does nothing without a reply after it, so starting one only clutters. Skip issues whose `autobot #<n>` worker is still running (ask your harness the way [arbe-delegate](../delegate/SKILL.md)'s page says; its `: fix` and `: verify` workers don't count). Oldest first, until `max_threads` are running; the rest wait for the next run.
 
 Start each through arbe-delegate, fire and forget: the workers outlive this run and report on the issue, so don't wait on them. Name it `autobot #<n>`, on the `orchestrator` model (`"<provider> <model> <level>"`), and brief it with only `/arbe-autobot https://github.com/<repo>/issues/<n>`.
 
