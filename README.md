@@ -81,7 +81,7 @@ Pass one or more targets to limit the install, for example
 The Markdown files in `agents/` are the source of truth. The installer copies
 them into Pi and renders the corresponding Claude Markdown and Codex TOML:
 
-- Pi: `~/.pi/agent/agents/*.md` and `~/.pi/agent/subagents.json`
+- Pi: `~/.pi/agent/agents/*.md`
 - Claude Code: `~/.claude/agents/*.md`
 - Codex: `~/.codex/agents/*.toml`
 

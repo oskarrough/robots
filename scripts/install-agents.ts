@@ -164,8 +164,4 @@ for (const target of targets) {
       await writeAtomic(join(home, ".codex", "agents", `${agent.name}.toml`), renderCodex(agent));
     }
   }
-  if (target === "pi") {
-    const settings = await Bun.file(join(repoRoot, "subagents.json")).text();
-    await writeAtomic(join(home, ".pi", "agent", "subagents.json"), settings);
-  }
 }
