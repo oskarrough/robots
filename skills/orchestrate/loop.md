@@ -1,6 +1,6 @@
 # Loop
 
-Leading a repo's feedback loop as one long-lived bb thread. An hourly bb automation sends you `tick`; nothing else is scheduled. Settings come from `autobot.toml` in the repo root (`repo`, `bb`, `orchestrator`, `max_threads`, `lookback`). If there's none, stop and say so.
+Leading a repo's feedback loop as one long-lived bb thread. An hourly bb automation sends you `tick`; nothing else is scheduled. Settings come from `autobot.toml` in the repo root (see [Settings](#settings)). If there's none, stop and say so.
 
 ```
 tick ─▶ file-as-issues ─▶ dedupe ─▶ pick ─▶ fire autobot per issue ─▶ judge what settled ─▶ friction
@@ -30,20 +30,43 @@ A tick:
    ```
 
    (b) also catches autobot's own comments; that's fine, autobot does nothing without a new reply. Skip issues with a busy `autobot #<n>` thread (`bb thread list --project <project> --json`, status not idle, children don't count). Oldest first, until `max_threads` are busy.
-4. **Fire and forget.** One thread per issue, without `--parent-self` (see [arbe-delegate's bb page](../delegate/references/bb.md)): `--title "autobot #<n>" --prompt "/arbe-autobot https://github.com/<repo>/issues/<n>"`, on the `orchestrator` model.
-5. **Judge** each issue that settled since the last tick (a PR, a question, closed): read its timeline, labels, PR and report. Check what the skills promise: one state label, comments start with 🤖, one question per stop, a closing comment with the link, report sections of five lines or fewer. A miss, or a `Friction:` line in the report, goes in the repo's `friction.md`.
-6. **File patterns.** A friction seen twice becomes one issue on oskarrough/robots, labelled `friction`: evidence links, the rule, a proposed edit. Search first; add evidence instead of filing twice. Oskar picks; an approved edit goes to a worker via arbe-delegate.
+4. **Fire and forget.** One thread per issue, without `--parent-self` (see [arbe-delegate's bb page](../delegate/references/bb.md)): `--title "autobot #<n>" --prompt "/arbe-autobot https://github.com/<repo>/issues/<n>"`, on the `orchestrator` model (`"<provider> <model> <level>"` becomes `--provider --model --reasoning-level`).
+5. **Judge** each issue that settled since the last tick (a PR, a question, closed): read its timeline, labels, PR and report. Check what the skills promise: one state label, comments start with 🤖, one question per stop, a closing comment with the link, report sections of five lines or fewer. A miss, or a `Friction:` line in the report, goes in the repo's `friction.md` (one line each: issue link, skill file, what).
+6. **File patterns.** A friction seen twice becomes one issue on oskarrough/robots, labelled `friction` (create the label once): evidence links, the rule, a proposed edit. Search first; add evidence instead of filing twice. Oskar picks; an approved edit goes to a worker via arbe-delegate.
 
-You're the only writer of `friction.md` and the scorecard; commit them straight to the base. Anything you'd need after a restart goes in those files, not only in your context. Final chat per tick: one line per thread fired, one per friction filed, or "nothing new".
+You're the only writer of `friction.md`; commit it straight to the base. Anything you'd need after a restart goes in those files, not only in your context. Final chat per tick: one line per thread fired, one per friction filed, or "nothing new".
+
+## Settings
+
+`autobot.toml`, repo root. Only `repo` and `inbox` are required.
+
+```toml
+repo = "owner/name"                                   # GitHub repo that gets the issues
+inbox = { inkast = "x7k2q9mf", key = "~/.config/inkast/name.env", label = "player-feedback" }
+bb = { project = "proj_abc123", machine = "hetzner-osk1" }   # `bb project list`
+orchestrator = "claude-code claude-sonnet-5-5 low"    # the lead's own model; its autobot threads
+fix = "claude-code claude-opus-5-5 high"              # fix thread; omit to use the orchestrator's
+verify = "claude-code claude-opus-5-5 high"           # verify thread; omit likewise
+max_threads = 3                                       # autobot threads busy at once
+lookback = "2 hours"                                  # schedule interval plus overlap
+```
+
+`inbox.inkast` is the list id; `key` is the env file holding `INKAST_ID`, `INKAST_WRITE`, `INKAST_KEY`; `label` is optional and goes on every issue filed from the inbox.
 
 ## Set it up
 
-1. `curl -X POST https://inkast.0sk.ar`, save `INKAST_ID`, `INKAST_WRITE`, `INKAST_KEY` to `~/.config/inkast/<repo>.env`.
-2. Feedback form in the app: POST text to `INKAST_WRITE`.
-3. `bb project create --name <repo> --root <checkout> --machine <machine>`
-4. `autobot.toml` in the repo root: `repo`, `inbox`, `bb`, `orchestrator`, `fix`, `verify`, `max_threads`, `lookback` (template: oskarrough/autobot-playground).
-5. AGENTS.md: "Feedback loop: arbe-orchestrate's loop.md. Checks: `<cmd>`. Base: main."
-6. In a bb thread: `/arbe-orchestrate lead the loop`, then `tick`.
-7. bb automation: send that thread `tick` hourly.
+1. Make the inkast list and keep its key (shown once):
+   ```sh
+   mkdir -p ~/.config/inkast && curl -s -X POST https://inkast.0sk.ar | jq -r '"INKAST_ID=\(.id)\nINKAST_WRITE=\(.write)\nINKAST_KEY=\(.key)"' > ~/.config/inkast/<repo>.env
+   ```
+   Point the app's feedback form at it: `curl -d "<text>" "$INKAST_WRITE"`.
+2. `bb project create --name <repo> --root <checkout> --machine <machine>`; the id goes in `autobot.toml`.
+3. Write `autobot.toml` ([Settings](#settings)) and commit it.
+4. Add to AGENTS.md: "Feedback loop: arbe-orchestrate's loop.md. Checks: `<cmd>`. Base: main."
+5. In a new bb thread in that project run `/arbe-orchestrate lead the loop`, then `tick` once to check it. Then make it hourly:
+   ```sh
+   bb automation create --project <project> --name "Loop: <repo>" --cron '7 * * * *' --timezone <tz> \
+     --target-thread <that thread> --provider <p> --model <m> --reasoning low --prompt tick
+   ```
 
 Unstick an issue by replying on it. Merge the PRs yourself.

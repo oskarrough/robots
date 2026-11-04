@@ -1,4 +1,5 @@
-import { mkdir, readdir, rm, symlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { lstat, mkdir, readdir, rm, symlink } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 // Symlink every skill in this repo into ~/.agents/skills (the canonical store
@@ -45,4 +46,15 @@ for (const dirName of skillDirs) {
   const claudeLink = join(claudeSkills, name);
   await rm(claudeLink, { recursive: true, force: true });
   await symlink(relative(claudeSkills, storeLink), claudeLink);
+}
+
+// Drop links left behind by skills that were renamed or folded into another.
+for (const dir of [store, claudeSkills]) {
+  for (const entry of await readdir(dir)) {
+    const path = join(dir, entry);
+    if (entry.startsWith("arbe-") && (await lstat(path)).isSymbolicLink() && !existsSync(path)) {
+      await rm(path);
+      console.log(`removed dangling ${path}`);
+    }
+  }
 }

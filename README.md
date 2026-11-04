@@ -123,7 +123,10 @@ itself:
     bun run install-skills
 
 That replaces each `~/.agents/skills/arbe-*` entry with a symlink to its
-`skills/<dir>` here (skills from other repos are left alone). From then on,
+`skills/<dir>` here (skills from other repos are left alone) and removes
+`arbe-*` links whose skill is gone. Run it from this checkout, not a
+worktree: the links point at wherever the script lives. `bunx skills add
+<path>` can't replace it: it always copies a local path into the store. From then on,
 edits in this repo are live in every agent immediately — no push, no
 reinstall. Re-run it only after creating a new skill directory. Don't run
 `bunx skills update` on the arbe skills here: it would replace the symlinks
