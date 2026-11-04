@@ -1,6 +1,6 @@
 # PR
 
-The base is the branch AGENTS.md names, else the default branch. Work in the fix worktree. Fetch, put the change on `autobot/<slug>` on top of the base on the remote (`main@origin`), run the repo's checks, commit, push, and open the PR. Swap the issue's state label for `fix-pending`. No agent attribution. If the push is blocked, give Oskar the exact command and stop. Then watch its checks to the end, deploy previews included (`gh pr checks <n> --watch`): red caused by the change goes back to fix; red only counts as not ours when the same check is red on the base's latest commit (`gh api repos/{owner}/{repo}/commits/<base>/check-runs`), not on other PRs; then name it in the closing comment.
+The base is the branch AGENTS.md names, else the default branch. Work in the fix worktree, with git: jj can't open it. Only this step pushes. Fetch, put the change on `autobot/<slug>` on top of the base on the remote (`main@origin`), run the repo's checks, commit, push, and open the PR. Swap the issue's state label for `fix-pending`. No agent attribution. Attach verify's before/after screenshots, if any (`gh pr create --attach <absolute path>` per file); no other screenshots. If the push is blocked, give Oskar the exact command and stop. Then watch its checks to the end, deploy previews included (`gh pr checks <n> --watch`): red caused by the change goes back to fix; red only counts as not ours when the same check is red on the base's latest commit (`gh api repos/{owner}/{repo}/commits/<base>/check-runs`), not on other PRs; then name it in the closing comment.
 
 Title and commit message follow `arbe-pr-writing`. The description is for a reviewer who hasn't read the report. Keep to this shape:
 
@@ -20,3 +20,5 @@ Fixes #<n>
 
 <Only a check that failed or didn't run, and why it wasn't fixed. Never list what passed.>
 ```
+
+Once the PR is up, post the one closing comment on the issue: a sentence or two on what was wrong and what the PR changes, plus its link. Never list checks that passed; name only one that failed and why it wasn't fixed.

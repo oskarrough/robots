@@ -26,3 +26,18 @@ gh api --paginate 'repos/<repo>/issues?labels=autobot,blocked' --jq '.[]
 Start each the way [arbe-delegate's bb page](../delegate/references/bb.md) says, without `--parent-self`: the threads outlive this run and report on the issue. `--title "autobot #<n>" --prompt "/arbe-autobot https://github.com/<repo>/issues/<n>"`, on the `orchestrator` model (`"<provider> <model> <level>"` becomes `--provider --model --reasoning-level`), in `bb.project` on `bb.machine`.
 
 Every run reads GitHub fresh; an earlier run in this thread isn't the current state. Final chat: one line per thread, `#<n> → @thread:<id>`, then the issues left waiting for a slot, or "nothing new".
+
+## autobot.toml
+
+Settings live in `autobot.toml` in the repo root. Only `repo` is required.
+
+```toml
+repo = "owner/name"                                   # GitHub repo that gets the issues
+inbox = { inkast = "x7k2q9mf", key = "~/.config/inkast/name.env", label = "player-feedback" }   # arbe-inkast-to-issues; omit without a feedback form
+bb = { project = "proj_abc123", machine = "hetzner-osk1" }   # where pick starts threads; `bb project list`
+orchestrator = "claude-code claude-sonnet-5-5 low"    # each autobot #n thread
+fix = "claude-code claude-opus-5-5 high"              # fix thread; omit to use the orchestrator's
+verify = "claude-code claude-opus-5-5 high"           # verify thread; omit likewise
+max_threads = 3                                       # autobot #n threads busy at once
+lookback = "2 hours"                                  # schedule interval plus overlap
+```
