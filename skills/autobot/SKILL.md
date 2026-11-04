@@ -50,7 +50,7 @@ Settings live in `autobot.toml` in the repo root. Only `repo` is required.
 
 ```toml
 repo = "owner/name"                                   # GitHub repo that gets the issues
-inbox = { inkast = "x7k2q9mf", key = "~/.config/inkast/name.env", label = "player-feedback" }   # arbe-file-as-issues; omit without a feedback form
+inbox = { inkast = "x7k2q9mf", key = "~/.config/inkast/name.env", label = "player-feedback" }   # arbe-inkast-to-issues; omit without a feedback form
 bb = { project = "proj_abc123", machine = "hetzner-osk1" }   # where pick starts threads; `bb project list`
 orchestrator = "claude-code claude-sonnet-5-5 low"    # each autobot #n thread
 fix = "claude-code claude-opus-5-5 high"              # fix thread; omit to use the orchestrator's

@@ -106,7 +106,7 @@ SKILLS
 - [arbe-documentation](skills/documentation/SKILL.md) — Diátaxis four-mode docs
 - [arbe-orchestrate](skills/orchestrate/SKILL.md) — lead a project: remarks to briefs to workers to landed
 - [arbe-autobot](skills/autobot/SKILL.md) — take a signal (issue, Sentry, text) through triage, reproduce, fix, verify and PR; stops only when blocked. With no signal, picks the issues that need a run
-- [arbe-file-as-issues](skills/file-as-issues/SKILL.md) — copy a repo's inkast inbox into GitHub issues
+- [arbe-inkast-to-issues](skills/inkast-to-issues/SKILL.md) — copy a repo's inkast inbox into GitHub issues
 - [arbe-delegate](skills/delegate/SKILL.md) — hand one outcome to a worker in herdr, bb or t3: pick the model, brief, steer, review
 - [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
 - [arbe-bro](skills/bro/SKILL.md) — restate the last message in plain human language
