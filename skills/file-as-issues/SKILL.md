@@ -1,6 +1,6 @@
 ---
 name: arbe-file-as-issues
-description: Copy every string in a repo's inkast inbox into its own GitHub issue, then delete the string. The first half of the feedback loop; arbe-create-threads-from-issues is the second. Use for "file-as-issues" or when an automation runs it in a repo with an autobot.toml.
+description: Copy every string in a repo's inkast inbox into its own GitHub issue, then delete the string. Step one of arbe-orchestrate's loop. Use for "file-as-issues" or when the loop's lead runs it in a repo with an autobot.toml.
 ---
 
 # File as issues

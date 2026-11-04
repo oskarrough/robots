@@ -12,6 +12,8 @@ Add `--new-environment worktree --base-branch main` when the worker should have 
 
 `--parent-self` wakes you when the worker ends a turn, so carry on meanwhile. Idle isn't done: a worker idle without its report gets told to finish.
 
+Fire and forget: leave out `--parent-self` when the outcome lands somewhere durable (an issue, a PR) and you'll read it there, or the thread wakes you on every turn it ends. A lead running many workers does this.
+
 ```sh
 bb thread tell <id> '<follow-up>'            # answer, steer, or "step 2"
 bb thread output <id>                        # its final message
