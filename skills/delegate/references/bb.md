@@ -19,6 +19,7 @@ bb thread tell <id> '<follow-up>'            # answer, steer, or "step 2"
 bb thread output <id>                        # its final message
 bb thread wait <id> --timeout 9m             # only when you have nothing else to do
 bb thread archive <id>                       # when done with it
+bb thread list --project "$BB_PROJECT_ID" --json | jq -r '.[] | select(.status != "idle") | .title'   # who's still running
 ```
 
 Use `--prompt-file` for anything longer than a line: inside double quotes the shell eats backticks and `$(...)`.

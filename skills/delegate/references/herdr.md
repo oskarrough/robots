@@ -8,7 +8,7 @@ A worker is a pane. `herdr-delegate` spawns, briefs, waits for a confirmed settl
 
 The `--kind … -- …` tail comes from [models](models.md). Pass a short `--timeout` always; without one a hung worker hangs your shell. Give the first worker `--new-tab workers` and later ones the returned tab ID with `--tab`, four per tab. The tab closes with its last pane; then `--new-tab` again. For raw pane and agent commands, `herdr --skill`.
 
-The name is the worker's address: unique, at most three plain words, `[a-z][a-z0-9_-]{0,31}`. Check `herdr agent list` first.
+The name is the worker's address: unique, at most three plain words, `[a-z][a-z0-9_-]{0,31}`. Check `herdr agent list` first; it also shows who's still running.
 
 Every fresh worker is told to send `[worker <name>] BLOCKED: <question>` or `[worker <name>] DONE: <report>` to your pane, so the result arrives as a prompt. Follow up by name:
 
