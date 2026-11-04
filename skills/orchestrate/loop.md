@@ -38,4 +38,12 @@ You're the only writer of `friction.md` and the scorecard; commit them straight 
 
 ## Set it up
 
-Make an inkast list (`curl -X POST https://inkast.0sk.ar`) and save its key outside the repo, as `~/.config/inkast/<repo>.env` with `INKAST_ID`, `INKAST_WRITE`, `INKAST_KEY`. Put the write URL in the app's feedback form. Make a bb project for the repo. Add `autobot.toml` and the loop to AGENTS.md. Start one thread running `/arbe-orchestrate` with "lead the loop", send it `tick` by hand once, then schedule the hourly `tick`.
+1. `curl -X POST https://inkast.0sk.ar`, save `INKAST_ID`, `INKAST_WRITE`, `INKAST_KEY` to `~/.config/inkast/<repo>.env`.
+2. Feedback form in the app: POST text to `INKAST_WRITE`.
+3. `bb project create --name <repo> --root <checkout> --machine <machine>`
+4. `autobot.toml` in the repo root: `repo`, `inbox`, `bb`, `orchestrator`, `fix`, `verify`, `max_threads`, `lookback` (template: oskarrough/autobot-playground).
+5. AGENTS.md: "Feedback loop: arbe-orchestrate's loop.md. Checks: `<cmd>`. Base: main."
+6. In a bb thread: `/arbe-orchestrate lead the loop`, then `tick`.
+7. bb automation: send that thread `tick` hourly.
+
+Unstick an issue by replying on it. Merge the PRs yourself.
