@@ -105,7 +105,7 @@ SKILLS
 - [arbe-pipeline-audit](skills/pipeline-audit/SKILL.md) — walk README pipeline diagrams against code
 - [arbe-documentation](skills/documentation/SKILL.md) — Diátaxis four-mode docs
 - [arbe-orchestrate](skills/orchestrate/SKILL.md) — lead a project: remarks to briefs to workers to landed; or lead a repo's feedback loop on an hourly tick
-- [arbe-autobot](skills/autobot/SKILL.md) — take a signal (issue, Sentry, text) through triage, reproduce, fix, verify and PR; stops when blocked and before pushing
+- [arbe-autobot](skills/autobot/SKILL.md) — take a signal (issue, Sentry, text) through triage, reproduce, fix, verify and PR; stops only when blocked
 - [arbe-file-as-issues](skills/file-as-issues/SKILL.md) — copy a repo's inkast inbox into GitHub issues
 - [arbe-delegate](skills/delegate/SKILL.md) — hand one outcome to a worker in herdr, bb or t3: pick the model, brief, steer, review
 - [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
