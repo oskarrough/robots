@@ -33,7 +33,7 @@ Settings live in `autobot.toml` in the repo root. Only `repo` is required.
 
 ```toml
 repo = "owner/name"                                   # GitHub repo that gets the issues
-inbox = { inkast = "x7k2q9mf", key = "~/.config/inkast/name.env", label = "player-feedback" }   # arbe-inkast-to-issues; omit without a feedback form
+inbox = { inkast = "x7k2q9mf", key = ".env.local", label = "player-feedback" }   # arbe-inkast-to-issues; key is a gitignored env file in the repo root; omit without a feedback form
 bb = { project = "proj_abc123", machine = "hetzner-osk1" }   # bb only: where workers start; `bb project list`
 orchestrator = "claude-code claude-sonnet-5-5 low"    # each autobot #n worker
 fix = "claude-code claude-opus-5-5 high"              # fix worker; omit to use the orchestrator's
