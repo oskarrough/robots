@@ -52,21 +52,3 @@ lookback = "2 hours"                                  # schedule interval plus o
 ```
 
 `inbox.inkast` is the list id; `key` is the env file holding `INKAST_ID`, `INKAST_WRITE`, `INKAST_KEY`; `label` is optional and goes on every issue filed from the inbox.
-
-## Set it up
-
-1. Make the inkast list and keep its key (shown once):
-   ```sh
-   mkdir -p ~/.config/inkast && curl -s -X POST https://inkast.0sk.ar | jq -r '"INKAST_ID=\(.id)\nINKAST_WRITE=\(.write)\nINKAST_KEY=\(.key)"' > ~/.config/inkast/<repo>.env
-   ```
-   Point the app's feedback form at it: `curl -d "<text>" "$INKAST_WRITE"`.
-2. `bb project create --name <repo> --root <checkout> --machine <machine>`; the id goes in `autobot.toml`.
-3. Write `autobot.toml` ([Settings](#settings)) and commit it.
-4. Add to AGENTS.md: "Feedback loop: arbe-orchestrate's loop.md. Checks: `<cmd>`. Base: main."
-5. In a new bb thread in that project run `/arbe-orchestrate lead the loop`, then `tick` once to check it. Then make it hourly:
-   ```sh
-   bb automation create --project <project> --name "Loop: <repo>" --cron '7 * * * *' --timezone <tz> \
-     --target-thread <that thread> --provider <p> --model <m> --reasoning low --prompt tick
-   ```
-
-Unstick an issue by replying on it. Merge the PRs yourself.
