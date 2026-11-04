@@ -24,7 +24,7 @@ gh api --paginate 'repos/<repo>/issues?labels=autobot,blocked' --jq '.[]
 
 (b) skips issues whose last comment starts with 🤖: a run does nothing without a reply after it, so starting one only clutters. Skip issues whose `autobot #<n>` worker is still running (ask your harness the way [arbe-delegate](../delegate/SKILL.md)'s page says; its `: fix` and `: verify` workers don't count). Oldest first, until `max_threads` are running; the rest wait for the next run.
 
-Start each through arbe-delegate, fire and forget: the workers outlive this run and report on the issue, so don't wait on them. Name it `autobot #<n>`, on the `orchestrator` model (`"<provider> <model> <level>"`), and brief it with only `/arbe-autobot https://github.com/<repo>/issues/<n>`.
+Each run gets a fresh worker; the issue and the report carry the state, not an old worker's context. Before starting one, archive the idle `autobot #<n>` workers an earlier run left for that issue, with their `: fix` and `: verify` children, so each issue shows one. Start each through arbe-delegate, fire and forget: the workers outlive this run and report on the issue, so don't wait on them. Name it `autobot #<n>`, on the `orchestrator` model (`"<provider> <model> <level>"`), and brief it with only `/arbe-autobot https://github.com/<repo>/issues/<n>`.
 
 Every run reads GitHub fresh; an earlier run in this session isn't the current state. Final chat: one line per worker, `#<n> → <its id or link>`, then the issues left waiting for a slot, or "nothing new".
 
