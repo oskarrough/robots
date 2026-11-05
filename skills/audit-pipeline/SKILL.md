@@ -1,6 +1,6 @@
 ---
-name: arbe-pipeline-audit
-description: "Walk an existing README pipeline diagram against the real call path and flag every function that isn't a named stage, has one caller, or wraps its callee's args, then decide each with the user. Use before a refactor sweep or when a path feels overgrown. Requires diagrams to exist — if none do, run arbe-diagram-first. Call-path scale: arbe-review for one diff, arbe-improve-codebase for modules."
+name: arbe-audit-pipeline
+description: "Walk an existing README pipeline diagram against the real call path and flag every function that isn't a named stage, has one caller, or wraps its callee's args, then decide each with the user. Use before a refactor sweep or when a path feels overgrown. Requires diagrams to exist — if none do, run arbe-draw-ascii-diagram. Call-path scale: arbe-review for one diff, arbe-improve-codebase for modules."
 ---
 
 # Pipeline audit
@@ -123,18 +123,18 @@ The chunker's `mediaPageToChunks` is called from `chunk()` and does real work, b
 
 ## When this works best
 
-- Repos with README pipeline diagrams already drawn (`arbe-diagram-first` is the upstream skill)
+- Repos with README pipeline diagrams already drawn (`arbe-draw-ascii-diagram` is the upstream skill)
 - Greenfield / alpha — renaming and inlining is cheap
 - Codebases that grew by per-feature helper proliferation
 
 ## When to skip
 
-- No README diagrams exist yet — run `arbe-diagram-first` first to establish the budget
+- No README diagrams exist yet — run `arbe-draw-ascii-diagram` first to establish the budget
 - Active incident or feature deadline — this is structural hygiene, not urgent
 - Single-file diffs — use `arbe-review` instead
 
 ## Pairs with
 
-- arbe-diagram-first — draws the budget this skill audits against
+- arbe-draw-ascii-diagram — draws the budget this skill audits against
 - arbe-review — diff-time check; this skill is path-time
 - arbe-improve-codebase — shallow-vs-deep at the module scale; this is the function scale

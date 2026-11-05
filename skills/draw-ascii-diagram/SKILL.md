@@ -1,6 +1,6 @@
 ---
-name: arbe-diagram-first
-description: "Draw a 5–10 line ASCII pipeline of the user verb, then stop and wait — no prose or code until the shape is agreed. Use for a single design or structure question: a pasted spec, a one-thing-or-two call, a how-should-this-be-shaped ask. Skip bug reports, UX complaints, and features whose verb is already pinned. Full session through to a plan: arbe-mull. Auditing a diagram that exists: arbe-pipeline-audit."
+name: arbe-draw-ascii-diagram
+description: "Draw a 5–10 line ASCII pipeline of the user verb, then stop and wait — no prose or code until the shape is agreed. Use for a single design or structure question: a pasted spec, a one-thing-or-two call, a how-should-this-be-shaped ask. Skip bug reports, UX complaints, and features whose verb is already pinned. Full session through to a plan: arbe-mull. Auditing a diagram that exists: arbe-audit-pipeline."
 ---
 
 # Diagram-first

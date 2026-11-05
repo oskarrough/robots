@@ -8,7 +8,7 @@ bb thread spawn --project "$BB_PROJECT_ID" --parent-self --title '<short name>' 
   --prompt-file brief.md --json
 ```
 
-Add `--new-environment worktree --base-branch main` when the worker should have its own checkout; leave it out to share yours (then the brief names the files others are in). `--machine <name>` runs it elsewhere, e.g. perf work on hetzner.
+Default to the main checkout: pass `--environment "$PWD"` (or your env id from `bb status`); leaving it out can land the worker in a fresh worktree. Only add `--new-environment worktree --base-branch main` when Oskar asks for an isolated checkout. In a shared checkout the brief names the files others are in. `--machine <name>` runs it elsewhere, e.g. perf work on hetzner.
 
 `--parent-self` wakes you when the worker ends a turn, so carry on meanwhile. Idle isn't done: a worker idle without its report gets told to finish.
 

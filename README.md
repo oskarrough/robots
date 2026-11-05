@@ -62,6 +62,12 @@ may still be running or awaiting settle confirmation. Rerun `wait`, not `prompt`
 waits indefinitely. The budget includes settle confirmation; leave room in
 your harness's command timeout for fresh-worker startup and reading the result.
 
+PLUGINS
+---------------
+
+- [bb-plugin-sidebar](bb-plugin-sidebar/README.md) — custom bb sidebar thread list
+- [herdr-jj-plugin](herdr-jj-plugin/README.md) — jj state in the Herdr sidebar
+
 AGENTS
 ---------------
 
@@ -97,12 +103,12 @@ SKILLS
 
 - [arbe-jj-jujutsu](skills/jj-jujutsu/SKILL.md) — using jj (jujutsu) for version control
 - [arbe-improve-codebase](skills/improve-codebase/SKILL.md) — find shallow modules to deepen
-- [arbe-discover-primitives](skills/discover-primitives/SKILL.md) — read a repo as an SDK/MCP surface
-- [arbe-diagram-first](skills/diagram-first/SKILL.md) — draw ASCII pipeline diagram before design prose or code
+- [arbe-map-repo-primitives](skills/map-repo-primitives/SKILL.md) — read a repo as an SDK/MCP surface
+- [arbe-draw-ascii-diagram](skills/draw-ascii-diagram/SKILL.md) — draw ASCII pipeline diagram before design prose or code
 - [arbe-review](skills/review/SKILL.md) — diff review and sweep review
 - [arbe-benchmark-agent-guidance](skills/benchmark-agent-guidance/SKILL.md) — controlled A/B benchmarks for agent guidance, harnesses, models, and reasoning levels
 - [arbe-mull](skills/mull/SKILL.md) — six-stage design session with review gates
-- [arbe-pipeline-audit](skills/pipeline-audit/SKILL.md) — walk README pipeline diagrams against code
+- [arbe-audit-pipeline](skills/audit-pipeline/SKILL.md) — walk README pipeline diagrams against code
 - [arbe-documentation](skills/documentation/SKILL.md) — Diátaxis four-mode docs
 - [arbe-orchestrate](skills/orchestrate/SKILL.md) — lead a project: remarks to briefs to workers to landed
 - [arbe-autobot](skills/autobot/SKILL.md) — take a signal (issue, Sentry, text) through triage, reproduce, fix, verify and PR; stops only when blocked. With no signal, picks the issues that need a run
@@ -111,6 +117,10 @@ SKILLS
 - [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
 - [arbe-bro](skills/bro/SKILL.md) — restate the last message in plain human language
 - [arbe-product-description](skills/product-description/SKILL.md) — outside-in, feature-by-feature behaviour spec of a product, verified and triaged
+- [arbe-land](skills/land/SKILL.md) — sort pending changes into commits and push main
+- [arbe-pr-writing](skills/pr-writing/SKILL.md) — human PR titles, descriptions and commit messages
+- [arbe-project-overview](skills/project-overview/SKILL.md) — where one named project stands
+- [arbe-system-overview](skills/system-overview/SKILL.md) — one screen of what needs doing on this machine
 
 Every agent reads skills from one canonical store, `~/.agents/skills/<name>/`.
 Some agents read it directly, the rest (Claude Code, Pi, ...) hold symlinks
