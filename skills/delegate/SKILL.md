@@ -3,7 +3,7 @@ name: arbe-delegate
 description: Hand one outcome to a worker agent — pick the model, brief, steer, review. Works in herdr, bb and t3. Use when work is worth another agent's context, not for small edits you already understand.
 ---
 
-Delegate a task to a worker: another coding agent with its own context. You own the design and the review; the worker owns one outcome. Not for small edits you already understand.
+Delegate a task to a worker: another coding agent with its own context. You own the design and the review; the worker owns one outcome. Not for small edits you already understand, unless you're leading (arbe-orchestrate).
 
 ## Where you are
 
@@ -19,16 +19,16 @@ Pick the model per task from [models](references/models.md). Spread parallel wor
 
 One outcome, reviewable in one sitting. Inline every rule the worker needs; it does not have your skills.
 
-- **Done list:** numbered, and the report gives each item's status. Workers otherwise call done halfway.
-- **Ownership:** files allowed and off-limits. Others are editing too; a needed change outside scope is a question, not permission.
+- **Outcome:** one, plus your reading of it. Ask for no more report than you need to judge: what the worker saw and ran, and where it doesn't commit, paths changed and a one-line commit message.
+- **Ownership:** others are editing too; a change needed elsewhere is a question, not permission. Keep workers apart by what you hand each, not by fences; [lanes](../orchestrate/lanes.md) are the exception.
 - **Check:** the project's scoped check command. If the work is something a person uses, the worker uses it before reporting: plays the feature, opens the page, runs the command.
-- **Commits:** in a repo, supply `arbe-jj-jujutsu`, binding; outside one, say "no commits". Only owned files, one outcome per commit. If the project lands straight on main, say so.
+- **Commits:** in its own worktree, supply `arbe-jj-jujutsu`, binding; in a shared checkout or outside a repo, say "no commits". Only files it changed, one outcome per commit. If the project lands straight on main, say so.
 - **Learnings:** anything that cost the worker time becomes one sentence in the repo's AGENTS.md, in the same commit.
-- **Report:** at most 10 plain lines: outcome, commits, check results, blockers. No subagents.
+- **Report:** at most 10 plain lines: status of each part (workers otherwise call done halfway), what it saw, commits or paths, check results, blockers. No subagents.
 
 ## Steer
 
-Spawn, then carry on with your own work; the report arrives as a message. Answer a blocked worker by name. A new outcome gets a fresh worker; a warm one fed task after task fills its context. The exception is staged work: "step 2" to the worker that finished step 1 beats briefing a stranger.
+Spawn, then carry on with your own work; the report arrives as a message. Answer a blocked worker by name. A new outcome gets a fresh worker; a warm one fed task after task fills its context. The exception is staged work and follow-ups: "step 2" to the worker that finished step 1 beats briefing a stranger.
 
 ## Review
 
