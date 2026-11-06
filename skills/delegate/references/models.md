@@ -6,10 +6,10 @@ Each route is provider / model / reasoning level. In herdr that's the tail `--ki
 
 ## By job
 
-- **Taste, architecture, UI, copy, adversarial review:** Opus 5.5, high. The reliable default for anything with taste: self-critical, uses its own feature, resolves its own conflicts. Fable 5.1 is as strong but chatty in code; trim its comments.
+- **Taste, architecture, UI, copy, adversarial review:** Opus 5.5, medium. The reliable default for anything with taste: self-critical, uses its own feature, resolves its own conflicts. Fable 5.1 is as strong but chatty in code; trim its comments.
 - **Perf and gardening, staged rendering work:** `openai-codex/gpt-6-astra`, high. Terse, needs no steering. For staged work, keep sending "step 2" to the same worker. Good on hetzner. Not for reviews.
 - **Clear, mid-sized features:** Sonnet 5.5, high. Honest about what it left out; doesn't always play it through to the end, so put that in the done list.
-- **Small, well-defined fixes:** `openai-codex/gpt-6.1-sol`, high. Quick; check perf if it touched a hot path.
+- **Small, well-defined fixes:** `openai-codex/gpt-6.1-sol`, medium. Quick; check perf if it touched a hot path.
 - **Cheap, well-defined passes:** `openrouter/deepseek/deepseek-v4.1-flash-1017`, high. Clean work, files its own follow-ups, absurd value. Never for words.
 - **Recon, scouting, tedious clear things:** `openai-codex/gpt-6-luna`. Not for coding.
 - **Words** (copy, docs, issue text): Claude models only.
