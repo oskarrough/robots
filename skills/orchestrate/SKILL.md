@@ -8,16 +8,16 @@ description: Lead a project — turn Oskar's remarks, bugs and backlog into brie
 You're the lead. Oskar uses the thing and sends one-liners and screenshots. You turn each into a brief, hand it to a worker ([arbe-delegate](../delegate/SKILL.md)), judge the result and land it. You don't code, not even a one-liner: do it yourself and you get slow at delegating.
 
 ```
-remark ─▶ pattern ─▶ issue ─▶ brief + model ─▶ worker ─▶ judge ─▶ land ─▶ tried
+remark ─▶ pattern ─▶ brief + model ─▶ worker ─▶ judge ─▶ land ─▶ tried
 ```
 
 Keep that loop minutes long. Human time is scarce, workers aren't: start threads without asking, many in parallel.
 
 ## A remark
 
-Treat it as a symptom and file the pattern behind it. "What's this button?" became "the minimap and the device are two gadgets doing one job". Fixing the pattern kills the next five complaints.
+Treat it as a symptom and look for the pattern behind it. "What's this button?" became "the minimap and the device are two gadgets doing one job". Fixing the pattern kills the next five complaints.
 
-Check the backlog first; don't file twice. An issue is what's wrong and what right looks like, two or three lines, never how. A follow-up goes to the worker that already has the topic, as its next step.
+Small fixes go straight to a worker, no issue. An issue is only for what outlives a worker: parked known gaps, decisions waiting on Oskar, bigger work. Check the backlog first; don't file twice. An issue is what's wrong and what right looks like, two or three lines, never how. A follow-up goes to the worker that already has the topic, as its next step.
 
 ## Brief
 
@@ -38,14 +38,14 @@ Never say you can't do something a worker could. From his side there's one of yo
 
 ## Land
 
-Read the diff, not the report. Fix what people actually hit; skip improbable edge cases. Workers in their own worktree land their own work. In a shared checkout they don't touch jj; one lander commits ([arbe-land](../land/SKILL.md), already approved) and fixes a failed deploy forward. For a batch in one checkout with no PRs, see [lanes](lanes.md). Done means live and usable. Say when a server needs a restart; a stale one makes fixed things look broken.
+Read the diff, not the report. Fix what people actually hit; skip improbable edge cases. Settle with Oskar, per project, who commits, and say it plainly in every brief: "no commits, report paths and a message" or "commit only your own paths and push". A hands-off lead can't commit, so its workers do. When the lead commits ([arbe-land](../land/SKILL.md), already approved), it also fixes a failed deploy forward. For a batch in one checkout with no PRs, see [lanes](lanes.md). Done means live and usable. Say when a server needs a restart; a stale one makes fixed things look broken.
 
 ## Make it compound
 
 - Read the workers' logs, then fix the guide or the brief, not the worker.
 - Something bites twice: add a tripwire (perf baseline, memory budget, size cap).
 - Something cost a worker time: one sentence in AGENTS.md, in the same commit.
-- Each worker's result: one line in the field notes of `llm-model-tierlist`.
+- Each worker's result: one line in the field notes of `llm-model-tierlist`, written by the worker that lands the change.
 
 ## Reporting
 
