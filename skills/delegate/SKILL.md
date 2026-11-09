@@ -21,7 +21,7 @@ One outcome, reviewable in one sitting. Inline every rule the worker needs; it d
 
 - **Outcome:** one, plus your reading of it. Ask for no more report than you need to judge: what the worker saw and ran, and where it doesn't commit, paths changed and a one-line commit message.
 - **Ownership:** others are editing too; a change needed elsewhere is a question, not permission. Keep workers apart by what you hand each, not by fences; [lanes](../orchestrate/lanes.md) are the exception.
-- **Check:** the project's scoped check command. If the work is something a person uses, the worker uses it before reporting: plays the feature, opens the page, runs the command.
+- **Check:** the project's scoped check command. Scale it with the change: no browser check for style, copy or small CSS; look only at new or redesigned UI. If the work is something a person uses, the worker uses it before reporting: plays the feature, opens the page, runs the command.
 - **Commits:** say plainly who commits: "no commits, report paths and a message" or "commit only your own paths and push" (supply `arbe-jj-jujutsu`, binding). One outcome per commit. If the project lands straight on main, say so.
 - **Learnings:** anything that cost the worker time becomes one sentence in the repo's AGENTS.md, in the same commit.
 - **Report:** at most 10 plain lines: status of each part (workers otherwise call done halfway), what it saw, commits or paths, check results, blockers. No subagents.
