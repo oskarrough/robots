@@ -23,6 +23,8 @@ const skillDirs = entries
   .map((e) => e.name)
   .sort();
 
+const names = new Set<string>();
+
 for (const dirName of skillDirs) {
   const skillDir = join(repoRoot, "skills", dirName);
   const skillFile = Bun.file(join(skillDir, "SKILL.md"));
@@ -38,6 +40,7 @@ for (const dirName of skillDirs) {
     throw new Error(`skills/${dirName}/SKILL.md: frontmatter name is required`);
   }
 
+  names.add(name);
   const storeLink = join(store, name);
   await rm(storeLink, { recursive: true, force: true });
   await symlink(skillDir, storeLink);
@@ -48,8 +51,19 @@ for (const dirName of skillDirs) {
   await symlink(relative(claudeSkills, storeLink), claudeLink);
 }
 
-// Drop links left behind by skills that were renamed or folded into another.
-for (const dir of [store, claudeSkills]) {
+// Drop skills that were renamed or folded into another: stale copies left in
+// the store by an old `bunx skills add`, then any links now dangling.
+for (const entry of await readdir(store)) {
+  const path = join(store, entry);
+  if (entry.startsWith("arbe-") && !names.has(entry) && (await lstat(path)).isDirectory()) {
+    await rm(path, { recursive: true });
+    console.log(`removed stale ${path}`);
+  }
+}
+
+const piSkills = join(home, ".pi", "agent", "skills");
+for (const dir of [store, claudeSkills, piSkills]) {
+  if (!existsSync(dir)) continue;
   for (const entry of await readdir(dir)) {
     const path = join(dir, entry);
     if (entry.startsWith("arbe-") && (await lstat(path)).isSymbolicLink() && !existsSync(path)) {
