@@ -14,7 +14,7 @@ Each route is provider / model / reasoning level. In herdr that's the tail `--ki
 - **Recon, scouting, tedious clear things:** `openai-codex/gpt-6-luna:high`, right every time in the test; low got facts wrong in 1 of 3 runs. Not for coding.
 - **Words** (copy, docs, issue text): Claude models only.
 
-`gpt-6.1-terra` is fast but stops halfway and skips the perf check; only with an explicit done list. Cursor Composer 2.5 and Grok 4.7 are fine on small, contained tasks.
+`gpt-6.1-terra` is fast but stops halfway and skips the perf check; only with an explicit done list. Cursor Composer 2.5 is fine on small, contained tasks. Never use Grok models.
 
 The speed numbers here come from one 36-run read-only test on a vague styling question.
 
