@@ -24,7 +24,7 @@ gh api --paginate 'repos/<repo>/issues?labels=autobot,blocked' --jq '.[]
 
 (b) skips issues whose last comment starts with 🤖: a run does nothing without a reply after it, so starting one only clutters. Skip issues whose `autobot #<n>` worker is still running (ask your harness the way [arbe-delegate](../delegate/SKILL.md)'s page says; its `: fix` and `: verify` workers don't count). Oldest first, until `max_threads` are running; the rest wait for the next run.
 
-Each run gets a fresh worker; the issue and the report carry the state, not an old worker's context. Before starting one, archive the idle `autobot #<n>` workers an earlier run left for that issue, with their `: fix` and `: verify` children, so each issue shows one. Start each through arbe-delegate, fire and forget: the workers outlive this run and report on the issue, so don't wait on them. Name it `autobot #<n>`, on the `orchestrator` model (`"<provider> <model> <level>"`), and brief it with only `/arbe-autobot https://github.com/<repo>/issues/<n>`.
+Each run gets a fresh worker; the issue and the report carry the state, not an old worker's context. Before starting one, archive the idle `autobot #<n>` workers an earlier run left for that issue, with their `: fix` and `: verify` children, so each issue shows one. Start each through arbe-delegate on the first machine in `bb.machine` that `bb machine list` shows connected, fire and forget: the workers outlive this run and report on the issue, so don't wait on them. Name it `autobot #<n>`, on the `orchestrator` model (`"<provider> <model> <level>"`), and brief it with only `/arbe-autobot https://github.com/<repo>/issues/<n>`.
 
 Every run reads GitHub fresh; an earlier run in this session isn't the current state. Final chat: one line per worker, `#<n> → <its id or link>`, then the issues left waiting for a slot, or "nothing new".
 
@@ -35,7 +35,7 @@ Settings live in `autobot.toml` in the repo root. Only `repo` is required.
 ```toml
 repo = "owner/name"                                   # GitHub repo that gets the issues
 inbox = { inkast = "x7k2q9mf", key = ".env.local", label = "player-feedback" }   # arbe-inkast-to-issues; key is a gitignored env file in the repo root; omit without a feedback form
-bb = { project = "proj_abc123", machine = "hetzner-osk1" }   # bb only: where workers start; `bb project list`
+bb = { project = "proj_abc123", machine = ["office-linux", "home-wsl", "hetzner"] }   # bb only: where workers start, first connected wins (`bb machine list`); `bb project list`
 orchestrator = "claude-code claude-sonnet-5-5 low"    # each autobot #n worker
 fix = "claude-code claude-opus-5-5 high"              # fix worker; omit to use the orchestrator's
 verify = "claude-code claude-opus-5-5 high"           # verify worker; omit likewise
