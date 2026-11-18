@@ -12,7 +12,7 @@ Default to the main checkout: pass `--environment "$PWD"` (or your env id from `
 
 `--parent-self` wakes you when the worker ends a turn, so carry on meanwhile. Idle isn't done: a worker idle without its report gets told to finish.
 
-Fire and forget: leave out `--parent-self` when the outcome lands somewhere durable (an issue, a PR) and you'll read it there, or the thread wakes you on every turn it ends. A lead running many workers does this.
+Fire and forget: when the outcome lands somewhere durable (an issue, a PR) and you'll read it there, add `--parent-notifications off`. The worker still nests under you in the sidebar but never wakes you. A lead running many workers does this.
 
 ```sh
 bb thread tell <id> '<follow-up>'            # answer, steer, or "step 2"
