@@ -17,6 +17,8 @@ gh issue create -R <repo> --title "<title>" --body "<body>"
 curl -s -X DELETE -H "Authorization: Bearer $INKAST_KEY" "$INKAST_WRITE/<id>"
 ```
 
+Use curl as shown: inkast answers Python's urllib with 403.
+
 For each string, oldest first:
 
 1. If an issue already carries its marker, skip to 3.
