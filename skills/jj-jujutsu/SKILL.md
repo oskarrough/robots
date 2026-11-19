@@ -155,6 +155,8 @@ jj git push --bookmark feature-name
 gh pr create                             # gh picks up the pushed bookmark
 ```
 
+In a shared checkout, always push one named bookmark (`jj git push -b <name>`), deletions included. A bare `jj git push`, `--all` or `--deleted` also pushes every other agent's pending bookmark deletions, which deletes their branches on GitHub.
+
 ## Commit messages
 
 **One line. ~72 chars target, ~100 hard cap.** If you can't fit it, the detail belongs in the PR or task, not the subject. Count before you commit — long subjects wreck `jj log`.
