@@ -34,7 +34,7 @@ Wait for each worker until its section is in the report, without ending your tur
 Rules every step shares:
 
 - Labels, comments and new issues post live; they're cheap to undo. Only you post: fix and verify write their open question as `Next: waiting on <question>`, and you put it on the issue.
-- Comment only when a reader of the issue needs it: a question, a reproduction, and one closing comment. Every stop to wait posts its one open question on the issue before the turn ends. The issue is the only place autobot asks, never Oskar's inbox. Every comment starts with "🤖 ". Keep every post shorter than feels natural.
+- Comment only when a reader of the issue needs it: a question, a reproduction, and one closing comment. Every stop to wait posts its one open question on the issue before the turn ends. A run started by a human reply ends with a 🤖 comment, even if it's only "Nothing to change.", so pick doesn't start it again. The issue is the only place autobot asks, never Oskar's inbox. Every comment starts with "🤖 ". Keep every post shorter than feels natural.
 - `question`, `needs-repro`, `blocked`, `confirmed` and `fix-pending` are state labels, one at a time: setting one removes the other.
 - The report, `~/.cache/autobot/<repo>/<slug>/report.md`, hands the next step what it needs and nothing else. Each step owns one section of at most five lines; its file says what goes in it. When a skill rule or tool cost you time or was unclear, the section ends with `Friction: <skill file>: <what>`; otherwise leave it out. A rerun replaces its step's section instead of adding one; the history lives in the issue, the PR and git. `Next:` stays the report's last line.
 - The repo's AGENTS.md wins where it disagrees with these files.
