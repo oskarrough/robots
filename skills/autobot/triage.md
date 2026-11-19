@@ -14,7 +14,7 @@ Label from intent alone: `bug` + `needs-repro`, or `enhancement`, or `question`.
 
 When it needs another open issue done first, mark it blocked by that issue on GitHub (`gh api -X POST repos/<repo>/issues/<n>/dependencies/blocked_by -F issue_id=<the blocker's id from gh api>`), label it `blocked` and stop with `Next: triage once #<m> closes`. `blocked` goes only with that link; anything a human has to answer is `question`. The link is the reply; don't comment. Never build on another issue's open branch.
 
-An issue with a label in `autobot.toml`'s `hold` stops here until a collaborator other than `github_username` has commented on it; then it runs on like any other. Holding, clear wishes get their type label and no comment, with `Next: held until a collaborator replies`; a real question still gets `question` and the question.
+An issue with a label in `autobot.toml`'s `hold` stops here (without a `hold` line, that's `inbox.label`: feedback from strangers is held unless the repo sets `hold = []`) until a collaborator other than `github_username` has commented on it; then it runs on like any other. Holding, clear wishes get their type label and no comment, with `Next: held until a collaborator replies`; a real question still gets `question` and the question.
 
 Fill every line of the template, `Next:` included. Report only what the signal says. Don't list what's missing unless the next step needs it, and don't restate these rules.
 

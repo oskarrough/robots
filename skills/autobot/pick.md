@@ -14,7 +14,7 @@ gh api --paginate repos/<repo>/issues --jq '.[]
   | "\(.number) \(.created_at)"'
 # (b) open and waiting or held; the last comment is a collaborator's, not autobot's
 gh issue list -R <repo> --state open --label autobot --limit 1000 \
-  --search "label:question,needs-repro,blocked,fix-pending,<each hold label>" --json number,comments \
+  --search "label:question,needs-repro,blocked,fix-pending,<each hold label, inbox.label by default>" --json number,comments \
   --jq '.[] | select(.comments | length > 0) | select(.comments | last
     | (.authorAssociation | test("OWNER|MEMBER|COLLABORATOR"))
     and .author.login != "<github_username>"
@@ -43,5 +43,5 @@ fix = "claude-code claude-opus-5-5 high"              # fix worker; omit to use 
 verify = "claude-code claude-opus-5-5 high"           # verify worker; omit likewise
 max_threads = 3                                       # autobot #n workers running at once
 github_username = "oskbot"                            # optional: post and push as this account, logged in under ~/.config/gh-<name>
-hold = ["player-feedback"]                            # optional: issues with these labels stop after triage until a collaborator replies
+hold = ["player-feedback"]                            # issues with these labels stop after triage until a collaborator replies; defaults to inbox.label, [] lets feedback go straight to fix
 ```
