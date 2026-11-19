@@ -2,7 +2,7 @@
 
 `autobot` with no signal: choose the issues that need a run and start one `autobot #<n>` worker each. Read `autobot.toml` for `repo`, `orchestrator`, `max_threads` and `github_username`. Don't add or change labels; each worker does.
 
-Pick (a) new issues, (b) waiting issues where a human spoke last, (c) blocked issues whose blockers have all closed:
+Pick (a) new issues, (b) waiting issues, and `inbox.label` issues autobot has triaged, where a human spoke last, (c) blocked issues whose blockers have all closed:
 
 ```sh
 # (a) open, untouched by autobot, filed by someone with access, not blocked
@@ -14,7 +14,7 @@ gh api --paginate repos/<repo>/issues --jq '.[]
   | "\(.number) \(.created_at)"'
 # (b) open and waiting, the last comment isn't autobot's own
 gh issue list -R <repo> --state open --label autobot --limit 1000 \
-  --search "label:question,needs-repro,blocked,fix-pending" --json number,comments \
+  --search "label:question,needs-repro,blocked,fix-pending,<inbox.label if set>" --json number,comments \
   --jq '.[] | select(.comments | length > 0 and (last.body | startswith("🤖") | not)) | .number'
 # with github_username set, test the author instead: (last.author.login != "<github_username>")
 # (c)
