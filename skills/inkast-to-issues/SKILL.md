@@ -21,10 +21,10 @@ Use curl as shown: inkast answers Python's urllib with 403.
 
 For each string, oldest first:
 
-1. If an issue already carries its marker, skip to 3.
+1. If it is clear spam, or an issue already carries its marker, skip to 3.
 2. Open an issue. Title: what the person wants or what went wrong, at most ten words, in their terms. Body: the string quoted verbatim, a blank line, then `inkast:<INKAST_ID>/<id>`.
 3. Delete the string.
 
-Issue first, delete second: a crash loses nothing, and the marker keeps a rerun from filing twice. Don't judge, merge or skip strings, even spam, and add no label beyond `inbox.label`; autobot's triage does that. If a call fails, stop there.
+Issue first, delete second: a crash loses nothing, and the marker keeps a rerun from filing twice. Clear spam (an ad, a sales link, keyboard mash) gets no issue: just delete it. When in doubt, file it. Otherwise don't judge or merge strings, and add no label beyond `inbox.label`; autobot's triage does that. If a call fails, stop there.
 
-Final chat: one line per string, `<id> → <issue URL>`, or "inbox empty".
+Final chat: a Markdown list, one `- <id> → <issue URL>` (or `- <id> → spam, deleted`) per string, or "inbox empty".

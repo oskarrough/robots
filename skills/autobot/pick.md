@@ -26,7 +26,7 @@ gh api --paginate 'repos/<repo>/issues?labels=autobot,blocked' --jq '.[]
 
 Each run gets a fresh worker; the issue and the report carry the state, not an old worker's context. Before starting one, archive the idle `autobot #<n>` workers an earlier run left for that issue, with their `: fix` and `: verify` children, so each issue shows one. Start each through arbe-delegate, fire and forget: the workers outlive this run and report on the issue, so don't wait on them. In bb, spawn them with `--parent-self --parent-notifications off` and `--machine` set to the first of `bb.machine` that `bb machine list` shows connected, so every worker folds under the loop's thread instead of filling the sidebar. Name it `autobot #<n>`, on the `orchestrator` model (`"<provider> <model> <level>"`), and brief it with only `/arbe-autobot https://github.com/<repo>/issues/<n>`.
 
-Every run reads GitHub fresh; an earlier run in this session isn't the current state. Final chat: one line per worker, `#<n> → <its id or link>`, then the issues left waiting for a slot, or "nothing new".
+Every run reads GitHub fresh; an earlier run in this session isn't the current state. Final chat: a Markdown list, one `- #<n> → <its id or link>` per worker, then the issues left waiting for a slot, or "nothing new".
 
 ## autobot.toml
 
