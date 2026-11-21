@@ -116,6 +116,7 @@ SKILLS
 - [arbe-delegate](skills/delegate/SKILL.md) — hand one outcome to a worker in herdr, bb or t3: pick the model, brief, steer, review
 - [arbe-changelog](skills/changelog/SKILL.md) — write user-facing changelog entries
 - [arbe-bro](skills/bro/SKILL.md) — restate the last message in plain human language
+- [arbe-overloaded](skills/overloaded/SKILL.md) — boil an overwhelming reply down to one decision, a pick and the cost of a blind yes
 - [arbe-product-description](skills/product-description/SKILL.md) — outside-in, feature-by-feature behaviour spec of a product, verified and triaged
 - [arbe-land](skills/land/SKILL.md) — sort pending changes into commits and push main
 - [arbe-pr-writing](skills/pr-writing/SKILL.md) — human PR titles, descriptions and commit messages
